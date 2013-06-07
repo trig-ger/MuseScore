@@ -9,7 +9,9 @@ class TimeSigMap;
 
 namespace Quantize {
 
-void applyAdaptiveQuant(std::multimap<int, MidiChord> &, const TimeSigMap *, int);
+void applyAdaptiveQuant(std::multimap<int, MidiChord> &chords,
+                        const TimeSigMap *sigmap,
+                        int allTicks);
 
 void applyGridQuant(std::multimap<int, MidiChord> &chords,
                     const TimeSigMap* sigmap,

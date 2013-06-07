@@ -14,10 +14,334 @@ extern Preferences preferences;
 
 namespace Quantize {
 
-void applyAdaptiveQuant(std::multimap<int, MidiChord> &/*chords*/,
-                        const TimeSigMap */*sigmap*/,
-                        int /*allTicks*/)
+// max allowed tempo scale mismatch between midi events and current timeline
+// after adaptive quantization
+const int SCORE_LENGTH_SCALE = 1;
+
+
+// allTicks - length of the whole score in ticks
+std::vector<int> metricLevelsOfScore(const TimeSigMap *sigmap, int allTicks, int minDuration)
       {
+      std::vector<int> levels;
+      // here we use one timesig for all score
+      Fraction timesig(4, 4); // default
+      if (!sigmap->empty())
+            timesig = sigmap->begin()->second.timesig();
+      auto levelsOfBar = Meter::metricLevelsOfBar(timesig, minDuration);
+      // add the level of start point of the first bar in score
+      levels.push_back(levelsOfBar.front());
+
+      int ticksPerBar = timesig.ticks();
+      int allScoreTicks = SCORE_LENGTH_SCALE * allTicks;
+      int barCount = allScoreTicks / ticksPerBar;
+      for (int i = 0; i != barCount; ++i) { // i is just a counter here
+            // +1 because end of the bar is the start of the next bar
+            levels.insert(levels.end(), levelsOfBar.begin() + 1, levelsOfBar.end());
+            }
+      return levels;
+      }
+/*
+std::vector<int> metricLevelsOfScore(const Score *score, int minDuration)
+      {
+      std::vector<int> levels;
+      int lastTick = score->lastMeasure()->endTick();
+
+      for (auto is = score->sigmap()->begin(); is != score->sigmap()->end(); ++is) {
+            auto next = is;
+            ++next;
+            int curTimesigTick = is->first;
+            int nextTimesigTick = (next == score->sigmap()->end()) ? lastTick : next->first;
+
+            Fraction timesig = is->second.timesig();
+            auto levelsOfBar = Meter::metricLevelsOfBar(timesig, minDuration);
+            // add the level of start point of the first bar in score
+            if (levels.empty())
+                  levels.push_back(levelsOfBar.front());
+
+            int ticksPerBar = timesig.ticks();
+            int barsWithThisTimesig = (nextTimesigTick - curTimesigTick) / ticksPerBar;
+            for (int i = 0; i != barsWithThisTimesig; ++i) { // i is just a counter here
+                  // +1 because end of the bar is the start of the next bar
+                  levels.insert(levels.end(), levelsOfBar.begin() + 1, levelsOfBar.end());
+                  }
+            }
+      return levels;
+      }
+*/
+
+int averageChordVelocity(const QList<MidiNote> &notes)
+      {
+      int sum = 0;
+      for (const auto &note: notes)
+            sum += note.velo;
+      return sum / notes.size();
+      }
+
+int maxChordVelocity(const QList<MidiNote> &notes)
+      {
+      if (notes.empty())
+            return 0;
+      int maxVelo = notes.front().velo;
+      for (const auto &note: notes) {
+            if (note.velo > maxVelo)
+                  maxVelo = note.velo;
+            }
+      return maxVelo;
+      }
+
+void metricLevelsToWeights(std::vector<int> &levels, const std::multimap<int, MidiChord> &chords)
+      {
+      // here chord weights = chord velocities as in MIDI file
+      // adapt levels to be in the range of [min weight .. max weight] of chords
+      // because now levels are 0, -1, -2 ... - far from chord weights
+
+      if (chords.empty())
+            return;
+      int maxChordVel = maxChordVelocity(chords.begin()->second.notes);
+      int minChordVel = maxChordVel;
+
+      for (const auto &chordEvent: chords) {
+            const auto &chord = chordEvent.second;
+            int chordVelocity = maxChordVelocity(chord.notes);
+
+            if (chordVelocity > maxChordVel)
+                  maxChordVel = chordVelocity;
+            if (chordVelocity < minChordVel)
+                  minChordVel = chordVelocity;
+            }
+      int minLevel = *std::min_element(levels.begin(), levels.end());
+      int maxLevel = *std::max_element(levels.begin(), levels.end());
+
+      double scale = (maxChordVel - minChordVel) * 1.0 / (maxLevel - minLevel);
+      for (auto &level: levels)
+            level = minChordVel + std::round(scale * (level - minLevel));
+      }
+
+
+template <typename T>
+class StepStore
+      {
+   public:
+      StepStore(int stepCount, int iCount, int jCount)
+            : store(stepCount * iCount * jCount, std::numeric_limits<T>::max())
+            , iCount(iCount), jCount(jCount)
+            {}
+      T& operator()(int step, int i, int j)
+            {
+            return store[step * iCount * jCount + i * jCount + j];
+            }
+   private:
+      std::vector<T> store;
+      int iCount;
+      int jCount;
+      };
+
+// based on Jeff Lieberman's algorithm of intelligent quantization
+void adaptiveQuant(std::multimap<int, MidiChord> &chords,
+                   const std::vector<int> &templateWeights,
+                   int minDuration)
+      {
+      if (chords.empty())
+            return;
+      int chordCount = chords.size();
+      int templatePointCount = templateWeights.size();
+
+      const int beta = 100;
+      const int gamma = 100;
+      const int delta = 1000;
+
+      // -- not now -- remember only 2 step history for costs
+      StepStore<double> totalCosts(chordCount, templatePointCount, templatePointCount);
+      // remember all history for chord positions
+      StepStore<int> prevBestChoices(chordCount, templatePointCount, templatePointCount);
+
+      std::vector<int> chordTimes;
+      std::vector<int> chordWeights;
+      std::vector<int> templateTimes;
+
+      for (const auto &chordEvent: chords) {
+            const auto &chord = chordEvent.second;
+            chordTimes.push_back(chord.onTime);
+            int chordVelocity = maxChordVelocity(chord.notes);
+            chordWeights.push_back(chordVelocity);
+            }
+
+      int firstTimeShift = chords.begin()->first;
+      for (int i = 0; i != templatePointCount; ++i)
+            templateTimes.push_back(firstTimeShift + i * minDuration);
+
+
+      // switchers for array for current and previous steps
+//      int now = 0;
+//      int prev = 1;
+
+      int step = 0;                 // which step we are trying to fit
+      int j = 0;
+      for (int i = step; i != templatePointCount; ++i) {       // current choice for this step in template
+            double timeShift = chordTimes[step] - templateTimes[i];
+            double weightShift = chordWeights[step] - templateWeights[i];
+            double cost = beta * (timeShift * timeShift)
+                        + gamma * (weightShift * weightShift);
+            totalCosts(step, i, j) = cost;
+            }
+
+//      now = 1 - now;
+//      prev = 1 - prev;
+
+      step = 1;                 // which step we are trying to fit
+      int k = 0;
+      for (int i = step; i != templatePointCount; ++i) {      // current choice for this step in template, can't be earlier than it's number
+            for (int j = step - 1; j != i; ++j) {        // current choice for previous step in template
+                  double timeShift = chordTimes[step] - templateTimes[i];
+                  double weightShift = chordWeights[step] - templateWeights[i];
+                  double cost = beta * (timeShift * timeShift)
+                              + gamma * (weightShift * weightShift)
+                              + totalCosts(step - 1, j, k);
+                  int minK = 0;  // also negligable
+                  // total cost is minimum - this is total cost so far, for this step, if i and j are the best choice:
+                  totalCosts(step, i, j) = cost;
+                  // now the k that yielded the minimum total cost is the best previous choice:
+                  prevBestChoices(step, i, j) = minK;
+                  }
+            }
+
+
+
+      std::vector<double> costs(templatePointCount - 2);
+
+      for (int step = 2; step != chordCount; ++step) {                 // which step we are trying to fit
+//            now = 1 - now;
+//            prev = 1 - prev;
+            for (int i = step; i != templatePointCount; ++i) {        // current choice for this step in template, can't be earlier than it's number
+                  for (int j = step - 1; j != i; ++j) {       // current choice for previous step in template
+                        // don't need to initialize cost, because we always write it to a bigger value, i think
+                        for (int k = step - 2; k != j; ++k) {        // current choice for second previous step in template
+                              // generate costs: [do not need to save] for each choice of i,j. then choose best k given those
+                              double oldTempoScale = (templateTimes[j] - templateTimes[k])
+                                          * 1.0 / (chordTimes[step - 1] - chordTimes[step - 2]);
+                              double newTempoScale = (templateTimes[i] - templateTimes[j])
+                                          * 1.0 / (chordTimes[step] - chordTimes[step - 1]);
+                              double tempoScaleChange = newTempoScale - oldTempoScale;
+                              double timeShift = chordTimes[step] - templateTimes[i];
+                              double weightShift = chordWeights[step] - templateWeights[i];
+                              costs[k] = beta * (timeShift * timeShift)
+                                       + gamma * (weightShift * weightShift)
+                                       + delta * (tempoScaleChange * tempoScaleChange)
+                                       + totalCosts(step - 1, j, k);
+                              }
+
+                        // find the best k
+                        double minCost = costs[step - 2];
+                        int minK = step - 2;
+                        for (int ii = step - 1; ii < j; ++ii) {
+                              if (costs[ii] < minCost) {
+                                    minCost = costs[ii];
+                                    minK = ii;
+                                    }
+                              }
+
+                        // total cost is minimum - this is total cost so far, for this step, if i and j are the best choice:
+                        totalCosts(step, i, j) = minCost;
+                        // now the k that yielded the minimum total cost is the best previous choice:
+                        prevBestChoices(step, i, j) = minK;
+                        }
+                  }
+            }
+
+
+//      for (int step = 0; step != 2; ++step) {
+//            qDebug() << "step " << step << "\n";
+//            for (int i = 0; i != templatePointCount; ++i) {
+//                  QString val;
+//                  for (int j = 0; j != templatePointCount; ++j) {
+//                        double num = totalCosts(step, i, j);
+//                        if (num == std::numeric_limits<double>::max()) {
+//                              val += "* ";
+//                              }
+//                        else {
+//                              val += QString::number(num) + " ";
+//                              }
+//                        }
+//                  qDebug() << val;
+//                  }
+//            }
+
+
+      // try to find best two final choices
+      int bestPrevChoice = 0;
+      {
+      double minCost = totalCosts(chordCount - 1, 0, 0);
+      for (int j = 0; j != templatePointCount; ++j) {
+            for (int i = 0; i != templatePointCount; ++i) {
+                  double cost = totalCosts(chordCount - 1, i, j);
+                  if (cost < minCost) {
+                        minCost = cost;
+                        bestPrevChoice = j;
+                        }
+                  }
+            }
+      }
+
+      int bestNowChoice = 0;
+      {
+      double minCost = totalCosts(chordCount - 1, 0, bestPrevChoice);
+      for (int i = 0; i != templatePointCount; ++i) {
+            double cost = totalCosts(chordCount - 1, i, bestPrevChoice);
+            if (cost < minCost) {
+                  minCost = cost;
+                  bestNowChoice = i;
+                  }
+            }
+      }
+
+      std::vector<int> bestChoices(chordCount);
+      bestChoices[chordCount - 1] = bestNowChoice;
+      bestChoices[chordCount - 2] = bestPrevChoice;
+
+      // travel backwards, finding each previous best choice
+      // pattern is prevBestChoices(step, i, j)
+      // i -> step, j -> step - 1, k -> step - 2
+      for (int step = chordCount - 3; step >= 0; --step)
+            bestChoices[step] = prevBestChoices(step + 2, bestChoices[step + 2], bestChoices[step + 1]);
+
+      // correct onTime value of every chord and note
+      // correct duration for every chord and note by scaling
+      int chordCounter = 0;
+      double scale = 1.0;
+      for (auto p = chords.begin(); p != chords.end(); ++p) {
+            auto &chord = p->second;
+            int newOnTime = templateTimes[bestChoices[chordCounter]];
+            int oldOnTime = chord.onTime;
+
+            int nextNewOnTime = 1;
+            int nextOldOnTime = 2;
+            auto next = p;
+            ++next;
+            if (next != chords.end()) {
+                  nextNewOnTime = templateTimes[bestChoices[chordCounter + 1]];
+                  nextOldOnTime = next->second.onTime;
+                  scale = (nextNewOnTime - newOnTime) * 1.0 / (nextOldOnTime - oldOnTime);
+                  }
+
+            chord.onTime = newOnTime;
+            // chord duration here is undefined because notes may have different durations
+            // so don't scale chord duration here, scale note durations instead
+            for (auto &note: chord.notes) {
+                  note.onTime = newOnTime;
+                  note.len = std::round(note.len * scale);
+                  }
+            ++chordCounter;
+            }
+      }
+
+void applyAdaptiveQuant(std::multimap<int, MidiChord> &chords,
+                        const TimeSigMap *sigmap,
+                        int allTicks)
+      {
+      int minDuration = MScore::division / 4; // 1/16 note
+      auto levels = metricLevelsOfScore(sigmap, allTicks, minDuration);
+      metricLevelsToWeights(levels, chords);
+      adaptiveQuant(chords, levels, minDuration);
       }
 
 
