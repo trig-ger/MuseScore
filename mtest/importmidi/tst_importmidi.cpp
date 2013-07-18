@@ -417,7 +417,7 @@ void TestImportMidi::findTupletApproximation()
       Fraction startTupletTime = Fraction(0);
       MidiTuplet::TupletInfo tupletApprox = MidiTuplet::findTupletApproximation(
                         tupletLen, tupletNumber, quantValue,
-                        startTupletTime, chords.begin(), chords.end()
+                        startTupletTime, chords.begin(), chords.end(), chords.begin()
                         );
       QCOMPARE(tupletApprox.onTime, startTupletTime);
       QCOMPARE(tupletApprox.len, tupletLen);
@@ -435,7 +435,7 @@ void TestImportMidi::findTupletApproximation()
       Fraction startTupletTime = Fraction::fromTicks(960);
       MidiTuplet::TupletInfo tupletApprox = MidiTuplet::findTupletApproximation(
                         tupletLen, tupletNumber, quantValue,
-                        startTupletTime, chords.begin(), chords.end()
+                        startTupletTime, chords.begin(), chords.end(), chords.begin()
                         );
       QVERIFY(tupletApprox.chords.size() == 0);
       }
@@ -443,7 +443,7 @@ void TestImportMidi::findTupletApproximation()
       Fraction startTupletTime = Fraction::fromTicks(1440);
       MidiTuplet::TupletInfo tupletApprox = MidiTuplet::findTupletApproximation(
                         tupletLen, tupletNumber, quantValue,
-                        startTupletTime, chords.begin(), chords.end()
+                        startTupletTime, chords.begin(), chords.end(), chords.begin()
                         );
       QVERIFY(tupletApprox.chords.size() == 1);
       QCOMPARE(tupletApprox.tupletSumError, Fraction::fromTicks(40));

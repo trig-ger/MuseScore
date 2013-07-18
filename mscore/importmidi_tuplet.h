@@ -32,6 +32,7 @@ struct TupletInfo
       Fraction tupletSumError;
       Fraction regularSumError;
       Fraction sumLengthOfRests;
+      bool firstTiedChord = false;  // if first tuplet note is tied with some previous note
       };
 
 // conversion ratios from tuplet durations to regular durations

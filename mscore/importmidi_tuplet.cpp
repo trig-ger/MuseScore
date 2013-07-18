@@ -192,8 +192,9 @@ TupletInfo findTupletApproximation(const Fraction &tupletLen,
                                    int tupletNumber,
                                    const Fraction &raster,
                                    const Fraction &startTupletTime,
-                                   const std::multimap<Fraction, MidiChord>::iterator &startChordIt,
-                                   const std::multimap<Fraction, MidiChord>::iterator &endChordIt)
+                                   const std::multimap<Fraction, MidiChord>::iterator &startDivChordIt,
+                                   const std::multimap<Fraction, MidiChord>::iterator &endDivChordIt,
+                                   const std::multimap<Fraction, MidiChord>::iterator &startBarChordIt)
       {
       TupletInfo tupletInfo;
       tupletInfo.tupletNumber = tupletNumber;
@@ -204,13 +205,13 @@ TupletInfo findTupletApproximation(const Fraction &tupletLen,
             tupletInfo.tupletQuantValue /= 2;
       tupletInfo.regularQuantValue = raster;
 
-      auto startTupletChordIt = startChordIt;
+      auto startTupletChordIt = startDivChordIt;
       for (int k = 0; k != tupletNumber; ++k) {
             Fraction tupletNotePos = startTupletTime + tupletLen / tupletNumber * k;
                         // choose the best chord, if any, for this tuplet note
             auto bestChord = findBestChordForTupletNote(tupletNotePos, raster,
-                                                        startTupletChordIt, endChordIt);
-            if (bestChord.first == endChordIt)
+                                                        startTupletChordIt, endDivChordIt);
+            if (bestChord.first == endDivChordIt)
                   continue;   // no chord fits to this tuplet note position
                         // chord can be in tuplet
             tupletInfo.chords.insert({k, bestChord.first});
@@ -222,6 +223,19 @@ TupletInfo findTupletApproximation(const Fraction &tupletLen,
                         // find chord quant error for a regular grid
             Fraction regularError = findOnTimeRegularError(bestChord.first->first, raster);
             tupletInfo.regularSumError += regularError;
+            }
+
+      if (tupletInfo.chords.find(0) == tupletInfo.chords.end()) {
+                        // if the first tuplet note is not occupied -
+                        // try to find a chord for this note
+                        // with onTime value < tuplet onTime value (tied chord)
+            auto firstChord = findOffTimeChordFor1stTupletNote(tupletNotePos, raster,
+                                                               startBarChordIt, endDivChordIt);
+            if (bestChord.first != endDivChordIt) {
+                  tupletInfo.chords.insert({0, firstChord});
+                  tupletInfo.firstTiedChord = true;
+                              // error values are zero for this chord
+                  }
             }
 
       Fraction beg = tupletInfo.onTime;
@@ -243,22 +257,34 @@ TupletInfo findTupletApproximation(const Fraction &tupletLen,
       return tupletInfo;
       }
 
-void markChordsAsUsed(std::map<std::pair<const Fraction, MidiChord> *, int> &usedFirstTupletNotes,
+void markChordsAsUsed(std::map<std::pair<const Fraction, MidiChord> *, int> &used1stOnTimeTupletNotes,
+                      std::map<std::pair<const Fraction, MidiChord> *, int> &used1stOffTimeTupletNotes,
                       std::set<std::pair<const Fraction, MidiChord> *> &usedChords,
-                      const std::map<int, std::multimap<Fraction, MidiChord>::iterator> &tupletChords)
+                      const TupletInfo &tupletInfo)
       {
+      const auto &tupletChords = tupletInfo.chords;
       if (tupletChords.empty())
             return;
 
       auto i = tupletChords.begin();
       int tupletNoteIndex = i->first;
       if (tupletNoteIndex == 0) {
-                        // check is the note of the first tuplet chord in use
-            auto ii = usedFirstTupletNotes.find(&*(i->second));
-            if (ii == usedFirstTupletNotes.end())
-                  ii = usedFirstTupletNotes.insert({&*(i->second), 1}).first;
-            else
-                  ++(ii->second);         // increase chord note counter
+            if (tupletInfo.firstTiedChord) {
+                              // check is the note of the first tuplet chord in use
+                  auto ii = used1stOffTimeTupletNotes.find(&*(i->second));
+                  if (ii == used1stOffTimeTupletNotes.end())
+                        ii = used1stOffTimeTupletNotes.insert({&*(i->second), 1}).first;
+                  else
+                        ++(ii->second);         // increase chord note count
+                  }
+            else {
+                              // similar for onTime notes
+                  auto ii = used1stOnTimeTupletNotes.find(&*(i->second));
+                  if (ii == used1stOnTimeTupletNotes.end())
+                        ii = used1stOnTimeTupletNotes.insert({&*(i->second), 1}).first;
+                  else
+                        ++(ii->second);
+                  }
             ++i;              // start from the second chord
             }
       for ( ; i != tupletChords.end(); ++i) {
@@ -268,10 +294,12 @@ void markChordsAsUsed(std::map<std::pair<const Fraction, MidiChord> *, int> &use
       }
 
 bool areTupletChordsInUse(
-            const std::map<std::pair<const Fraction, MidiChord> *, int> &usedFirstTupletNotes,
+            const std::map<std::pair<const Fraction, MidiChord> *, int> &used1stOnTimeTupletNotes,
+            const std::map<std::pair<const Fraction, MidiChord> *, int> &used1stOffTimeTupletNotes,
             const std::set<std::pair<const Fraction, MidiChord> *> &usedChords,
-            const std::map<int, std::multimap<Fraction, MidiChord>::iterator> &tupletChords)
+            const TupletInfo &tupletInfo)
       {
+      const auto &tupletChords = tupletInfo.chords;
       if (tupletChords.empty())
             return false;
 
@@ -281,15 +309,39 @@ bool areTupletChordsInUse(
       int tupletNoteIndex = i->first;
       if (tupletNoteIndex == 0) {
                         // check are first tuplet notes all in use (1 note - 1 voice)
-            auto ii = usedFirstTupletNotes.find(&*(i->second));
-            if (ii != usedFirstTupletNotes.end()) {
-                  if (!operations.useMultipleVoices && ii->second > 1)
+            int voices = 0;
+            if (tupletInfo.firstTiedChord) {
+                  auto it = used1stOffTimeTupletNotes.find(&*(i->second));
+                  if (it->second >= i->second->second.notes.size())
                         return true;
-                  else if (ii->second >= i->second->second.notes.size()
-                              || ii->second >= VOICES) {
-                              // need to choose next tuplet candidate - no more available voices
-                        return true;
+                  if (it != used1stOffTimeTupletNotes.end())
+                        voices += it->second;
+                              // take into account onTime chords that may add voices
+                  Fraction onTime = it->first->first;
+                  Fraction offTime = maxNoteLen(it->first->second.notes) + onTime;
+                  for (const auto &note: used1stOnTimeTupletNotes) {
+                        Fraction chordOnTime = note.first->first;
+                        if (chordOnTime > onTime && chordOnTime < offTime)
+                              ++voices;
                         }
+                  }
+            else {
+                  auto it = used1stOnTimeTupletNotes.find(&*(i->second));
+                  if (it->second >= i->second->second.notes.size())
+                        return true;
+                  if (it != used1stOnTimeTupletNotes.end())
+                        voices += it->second;
+                              // take into account tied chords that may add voices
+                  for (const auto &note: used1stOffTimeTupletNotes) {
+                        Fraction onTime = note.first->first;
+                        Fraction offTime = maxNoteLen(note.first->second.notes) + onTime;
+                        if (tupletInfo.onTime > onTime && tupletInfo.onTime < offTime)
+                              ++voices;
+                        }
+                  }
+            if ((!operations.useMultipleVoices && voices > 1) || voices >= VOICES) {
+                              // need to choose next tuplet candidate - no more available voices
+                  return true;
                   }
             ++i;
             }
@@ -310,7 +362,8 @@ validateTuplets(std::list<int> &indexes, const std::vector<TupletInfo> &tuplets)
       if (tuplets.empty())
             return std::make_tuple(0.0, 0, Fraction());
                   // structure of map: <chord ID, count of use of first tuplet chord with this tick>
-      std::map<std::pair<const Fraction, MidiChord> *, int> usedFirstTupletNotes;
+      std::map<std::pair<const Fraction, MidiChord> *, int> used1stOnTimeTupletNotes;
+      std::map<std::pair<const Fraction, MidiChord> *, int> used1stOffTimeTupletNotes;
                   // chord IDs of already used chords
       std::set<std::pair<const Fraction, MidiChord> *> usedChords;
       std::set<std::pair<const Fraction, MidiChord> *> excludedChords;
@@ -319,14 +372,16 @@ validateTuplets(std::list<int> &indexes, const std::vector<TupletInfo> &tuplets)
             const auto &tupletChords = tuplets[*it].chords;
                         // check for chord notes that are already in use in another tuplets
             if (tupletChords.empty()
-                        || areTupletChordsInUse(usedFirstTupletNotes, usedChords, tupletChords)) {
+                        || areTupletChordsInUse(used1stOnTimeTupletNotes, used1stOffTimeTupletNotes,
+                                                usedChords, tuplets[*it])) {
                   for (const auto &chord: tupletChords)
                         excludedChords.insert(&*chord.second);
                   it = indexes.erase(it);
                   continue;
                   }
                         // we can use this tuplet
-            markChordsAsUsed(usedFirstTupletNotes, usedChords, tupletChords);
+            markChordsAsUsed(used1stOnTimeTupletNotes, used1stOffTimeTupletNotes,
+                             usedChords, tuplets[*it]);
             ++it;
             }
 
