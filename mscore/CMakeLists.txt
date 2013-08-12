@@ -46,7 +46,7 @@ QT4_WRAP_UI (ui_headers
       fretdprops.ui stafftype.ui sectionbreak.ui  bend.ui tremolobar.ui textproperties.ui
       editpitch.ui editstringdata.ui editraster.ui mediadialog.ui textstyle.ui album.ui layer.ui
       omrpanel.ui startdialog.ui masterpalette.ui pluginManager.ui harmonyedit.ui pathlistdialog.ui
-      note_groups.ui importmidi_panel.ui
+      note_groups.ui importmidi_panel.ui importmidi_selector.ui
 
       debugger/barline.ui
       debugger/harmony.ui
@@ -153,7 +153,7 @@ QT4_WRAP_CPP (mocs
       importmidi_opmodel.h importmidi_trmodel.h importmidi_opdelegate.h
       importmidi_meter.h importmidi_operation.h importmidi_quant.h importmidi_chord.h
       importmidi_tuplet.h importmidi_inner.h importmidi_data.h importmidi_swing.h
-      debugger/debugger.h
+      debugger/debugger.h importmidi_selector.h
       ${OMR_MOCS}
       ${SCRIPT_MOCS}
       )
@@ -267,7 +267,7 @@ add_executable ( ${ExecutableName}
       importmidi_panel.cpp importmidi_operations.cpp miconengine.cpp
       importmidi_opmodel.cpp importmidi_trmodel.cpp importmidi_opdelegate.cpp
       importmidi_meter.cpp importmidi_quant.cpp importmidi_tuplet.cpp importmidi_chord.cpp
-      importmidi_data.cpp importmidi_swing.cpp
+      importmidi_data.cpp importmidi_swing.cpp importmidi_selector.cpp
 
       ${OMR_FILES}
       ${AUDIO}

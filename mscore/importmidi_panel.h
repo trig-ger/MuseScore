@@ -3,11 +3,10 @@
 
 
 namespace Ui {
-      class ImportMidiPanel;
-      }
+class ImportMidiPanel;
+}
 
 class QModelIndex;
-
 
 namespace Ms {
 
