@@ -179,8 +179,8 @@ OperationsModel::OperationsModel()
       swing->values.push_back("Shuffle (3:1)");
       swing->parent = root.get();
       root->children.push_back(std::unique_ptr<Node>(swing));
-      
-      
+
+
       Node *changeClef = new Node;
       changeClef->name = "Clef may change along the score";
       changeClef->oper.type = MidiOperation::Type::CHANGE_CLEF;
@@ -384,7 +384,7 @@ QVariant OperationsModel::data(const QModelIndex &index, int role) const
                   break;
             case Qt::EditRole:
                   if (index.column() == OperationCol::VALUE && !node->values.empty())
-                        return node->values;
+                        return node->values;    // return string list of possible values
                   break;
             case Qt::CheckStateRole:
                   if (index.column() == OperationCol::VALUE && node->values.empty()) {
