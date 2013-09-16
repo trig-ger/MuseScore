@@ -80,24 +80,6 @@ class MTrack {
       void createKeys(int accidentalType);
       };
 
-namespace MidiTuplet {
-
-struct TupletInfo
-      {
-      ReducedFraction onTime = {-1, 1};  // invalid
-      ReducedFraction len = {-1, 1};
-      int tupletNumber = -1;
-      ReducedFraction tupletQuant;
-      ReducedFraction regularQuant;
-                  // <chord onTime, chord iterator>
-      std::map<ReducedFraction, std::multimap<ReducedFraction, MidiChord>::iterator> chords;
-      ReducedFraction tupletSumError;
-      ReducedFraction regularSumError;
-      ReducedFraction sumLengthOfRests;
-      int firstChordIndex = -1;
-      };
-
-} // namespace MidiTuplet
 } // namespace Ms
 
 

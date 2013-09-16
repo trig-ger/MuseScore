@@ -9,13 +9,13 @@ class TimeSigMap;
 class ReducedFraction;
 
 namespace MidiTuplet {
-struct TupletData;
+struct TupletInfo;
 }
 
 namespace Quantize {
 
 void quantizeChords(std::multimap<ReducedFraction, MidiChord> &chords,
-                    const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tupletEvents,
+                    const std::multimap<ReducedFraction, MidiTuplet::TupletInfo> &tupletEvents,
                     const TimeSigMap *sigmap);
 
 ReducedFraction fixedQuantRaster();

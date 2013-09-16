@@ -128,15 +128,16 @@ ReducedFraction quantizeValue(const ReducedFraction &value,
 ReducedFraction findQuantRaster(
             const ReducedFraction &time,
             int voice,
-            const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tupletEvents,
+            const std::multimap<ReducedFraction, MidiTuplet::TupletInfo> &tupletEvents,
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const TimeSigMap *sigmap)
       {
       ReducedFraction raster;
       const auto tupletIt = MidiTuplet::findTupletContainsTime(voice, time, tupletEvents);
 
-      if (tupletIt != tupletEvents.end() && time > tupletIt->first)
+      if (tupletIt != tupletEvents.end() && time > tupletIt->first) {
             raster = tupletIt->second.tupletQuant;   // quantize onTime with tuplet quant
+            }
       else {
                         // quantize onTime with regular quant
             int bar, beat, tick;
@@ -154,7 +155,7 @@ ReducedFraction findQuantRaster(
 // input chords - sorted by onTime value, onTime values are not repeated
 
 void quantizeChords(std::multimap<ReducedFraction, MidiChord> &chords,
-                    const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tupletEvents,
+                    const std::multimap<ReducedFraction, MidiTuplet::TupletInfo> &tupletEvents,
                     const TimeSigMap *sigmap)
       {
       std::multimap<ReducedFraction, MidiChord> quantizedChords;

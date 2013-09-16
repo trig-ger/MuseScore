@@ -154,7 +154,7 @@ QT4_WRAP_CPP (mocs
       importmidi_operation.h importmidi_quant.h importmidi_chord.h
       importmidi_tuplet.h importmidi_inner.h importmidi_data.h importmidi_swing.h
       debugger/debugger.h importmidi_fraction.h importmidi_drum.h
-      importmidi_lrhand.h importmidi_lyrics.h importmidi_trview.h
+      importmidi_lrhand.h importmidi_lyrics.h importmidi_trview.h importmidi_voice.h
       ${OMR_MOCS}
       ${SCRIPT_MOCS}
       )
@@ -270,6 +270,7 @@ add_executable ( ${ExecutableName}
       importmidi_meter.cpp importmidi_quant.cpp importmidi_tuplet.cpp importmidi_chord.cpp
       importmidi_data.cpp importmidi_swing.cpp importmidi_fraction.cpp importmidi_drum.cpp
       importmidi_clef.cpp importmidi_lrhand.cpp importmidi_lyrics.cpp importmidi_trview.cpp
+      importmidi_voice.cpp
 
       ${OMR_FILES}
       ${AUDIO}

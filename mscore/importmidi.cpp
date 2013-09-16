@@ -52,6 +52,7 @@
 #include "importmidi_clef.h"
 #include "importmidi_lrhand.h"
 #include "importmidi_lyrics.h"
+#include "importmidi_voice.h"
 
 
 namespace Ms {
@@ -101,8 +102,13 @@ void quantizeAllTracks(std::multimap<int, MTrack> &tracks,
             opers.setCurrentTrack(mtrack.indexOfOperation);
             if (mtrack.mtrack->drumTrack())
                   opers.adaptForPercussion(mtrack.indexOfOperation);
-            mtrack.tuplets = MidiTuplet::findAllTuplets(mtrack.chords, sigmap, lastTick);
-            Quantize::quantizeChords(mtrack.chords, mtrack.tuplets, sigmap);
+            auto tupletEvents = MidiTuplet::findAllTuplets(mtrack.chords, sigmap, lastTick);
+            Quantize::quantizeChords(mtrack.chords, tupletEvents, sigmap);
+            if (opers.currentTrackOperations().useMultipleVoices) {
+                  MidiVoice::assignVoices(mtrack.chords, tupletEvents, startBarChordIt, endBarChordIt,
+                                                  endBarTick, endBarTick - startBarTick);
+                  }
+            mtrack.tuplets = tupletEvents;
             }
       }
 

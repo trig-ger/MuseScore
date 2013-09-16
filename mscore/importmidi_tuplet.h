@@ -14,7 +14,21 @@ class Staff;
 
 namespace MidiTuplet {
 
-struct TupletInfo;
+struct TupletInfo
+      {
+      ReducedFraction onTime = {-1, 1};  // invalid
+      ReducedFraction len = {-1, 1};
+      int tupletNumber = -1;
+      ReducedFraction tupletQuant;
+      ReducedFraction regularQuant;
+                  // <chord onTime, chord iterator>
+      std::map<ReducedFraction, std::multimap<ReducedFraction, MidiChord>::iterator> chords;
+      ReducedFraction tupletSumError;
+      ReducedFraction regularSumError;
+      ReducedFraction sumLengthOfRests;
+      int firstChordIndex = -1;
+      std::multimap<ReducedFraction, MidiChord>::iterator tiedChord;
+      };
 
 struct TupletData
       {
@@ -39,7 +53,7 @@ ReducedFraction findOffTimeRaster(const ReducedFraction &noteOffTime,
 ReducedFraction findOffTimeRaster(const ReducedFraction &noteOffTime,
                                   int voice,
                                   const ReducedFraction &regularQuant,
-                                  const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tupletEvents);
+                                  const std::multimap<ReducedFraction, TupletData> &tupletEvents);
 
 std::vector<TupletData>
 findTupletsInBarForDuration(int voice,
@@ -48,18 +62,18 @@ findTupletsInBarForDuration(int voice,
                             const ReducedFraction &durationLen,
                             const std::multimap<ReducedFraction, TupletData> &tupletEvents);
 
-std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator
+std::multimap<ReducedFraction, TupletData>::const_iterator
 findTupletForTimeRange(int voice,
                        const ReducedFraction &onTime,
                        const ReducedFraction &len,
                        const std::multimap<ReducedFraction, TupletData> &tupletEvents);
 
-std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator
+std::multimap<ReducedFraction, TupletData>::const_iterator
 findTupletContainsTime(int voice,
                        const ReducedFraction &time,
                        const std::multimap<ReducedFraction, TupletData> &tupletEvents);
 
-std::multimap<ReducedFraction, TupletData>
+std::multimap<ReducedFraction, TupletInfo>
 findAllTuplets(std::multimap<ReducedFraction, MidiChord> &chords,
                const TimeSigMap *sigmap,
                const ReducedFraction &lastTick);
@@ -74,6 +88,9 @@ void addElementToTuplet(int voice,
 
 void createTuplets(Staff *staff,
                    const std::multimap<ReducedFraction, TupletData> &tuplets);
+
+std::multimap<ReducedFraction, TupletData>
+convertToData(const std::multimap<ReducedFraction, TupletInfo> &tuplets);
 
 } // namespace MidiTuplet
 } // namespace Ms
