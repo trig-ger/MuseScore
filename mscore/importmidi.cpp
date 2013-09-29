@@ -853,34 +853,9 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
       return tracksMeta;
       }
 
-void convertMidi(Score *score, const MidiFile *mf)
-      {
-      ReducedFraction lastTick;
-      auto *sigmap = score->sigmap();
-
-      auto tracks = createMTrackList(lastTick, sigmap, mf);
-      cleanUpMidiEvents(tracks);
       MChord::collectChords(tracks);
-      MChord::removeOverlappingNotes(tracks);
-      quantizeAllTracks(tracks, sigmap, lastTick);
-      MChord::removeOverlappingNotes(tracks);
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
-      LRHand::splitIntoLeftRightHands(tracks);
-      MidiDrum::splitDrumVoices(tracks);
-      MidiDrum::splitDrumTracks(tracks);
       MidiDrum::removeRests(tracks, sigmap);
-      MChord::splitUnequalChords(tracks);
-                  // no more track insertion/reordering/deletion from now
-      QList<MTrack> trackList = prepareTrackList(tracks);
-      createInstruments(score, trackList);
-      MidiDrum::setStaffBracketForDrums(trackList);
-      createMeasures(lastTick, score);
-      createNotes(lastTick, trackList, mf->midiType());
-      createTimeSignatures(score);
-      score->connectTies();
-      MidiLyrics::setLyricsToScore(mf, trackList);
-      }
-
 void loadMidiData(MidiFile &mf)
       {
       mf.separateChannel();
@@ -924,6 +899,60 @@ QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
       return getTracksMeta(trackList, mf);
       }
 
+std::string prepareSampleText(const QList<TrackMeta> &tracksMeta)
+      {
+      std::string text;
+      auto allLyricsList = MidiLyrics::makeLyricsList(std::numeric_limits<unsigned int>::max());
+      for (const auto &t: tracksMeta)
+            text += t.staffName + " ";
+      for (const auto &t: allLyricsList)
+            text += t + " ";
+      return text;
+      }
+
+void tryToDetectCharset(const QString &fileName)
+      {
+      auto tracksMeta = extractMidiTracksMeta(fileName);
+      std::string text = prepareSampleText(tracksMeta);
+      QString charsetGuess = MidiCharset::detectCharset(text);
+      preferences.midiImportOperations.midiData().setCharset(fileName, charsetGuess);
+      }
+
+void convertMidi(Score *score, const MidiFile *mf, const QString &fileName)
+      {
+      ReducedFraction lastTick;
+      auto *sigmap = score->sigmap();
+                  // true if a new MIDI file was opened
+      bool firstOpen = (preferences.midiImportOperations.count() == 0);
+
+      auto tracks = createMTrackList(lastTick, sigmap, mf);
+      MChord::collectChords(tracks);
+      cleanUpMidiEvents(tracks);
+      MChord::removeOverlappingNotes(tracks);
+      quantizeAllTracks(tracks, sigmap, lastTick);
+      MChord::removeOverlappingNotes(tracks);
+      LRHand::splitIntoLeftRightHands(tracks);
+      MidiDrum::splitDrumVoices(tracks);
+      MidiDrum::splitDrumTracks(tracks);
+      MChord::splitUnequalChords(tracks);
+                  // no more track insertion/reordering/deletion from now
+      QList<MTrack> trackList = prepareTrackList(tracks);
+      if (firstOpen) {
+            MidiLyrics::extractLyricsToMidiData(mf);
+            tryToDetectCharset(fileName);
+            }
+      createInstruments(score, trackList);
+      MidiDrum::setStaffBracketForDrums(trackList);
+      createMeasures(lastTick, score);
+      createNotes(lastTick, trackList, mf->midiType());      // after charset detection
+      createTimeSignatures(score);
+      score->connectTies();
+      if (firstOpen)
+            MidiLyrics::setInitialLyricsFromMidiData(trackList);
+      else
+            MidiLyrics::setLyricsFromOperations(trackList);
+      }
+
 //---------------------------------------------------------
 //   importMidi
 //---------------------------------------------------------
@@ -961,7 +990,7 @@ Score::FileError importMidi(Score *score, const QString &name)
             midiData.setMidiFile(name, mf);
             }
 
-      convertMidi(score, midiData.midiFile(name));
+      convertMidi(score, midiData.midiFile(name), name);
 
       return Score::FILE_NO_ERROR;
       }

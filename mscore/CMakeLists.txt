@@ -297,6 +297,7 @@ target_link_libraries(mscore
       fluid
       effects
       vorbisfile
+      universalchardet
       )
 if (ZERBERUS)
       target_link_libraries(mscore zerberus synthesizer)

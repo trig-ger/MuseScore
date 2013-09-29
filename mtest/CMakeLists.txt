@@ -61,6 +61,31 @@ add_library(
       ${PROJECT_SOURCE_DIR}/thirdparty/rtf2html/rtf2html.cpp    # required by capella.cpp and capxml.cpp
       ${PROJECT_SOURCE_DIR}/thirdparty/rtf2html/rtf_keyword.cpp # required by capella.cpp and capxml.cpp
       ${PROJECT_SOURCE_DIR}/thirdparty/rtf2html/rtf_table.cpp   # required by capella.cpp and capxml.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/CharDistribution.cpp    # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/JpCntx.cpp              # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangBulgarianModel.cpp  # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangCyrillicModel.cpp   # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangGreekModel.cpp      # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangHungarianModel.cpp  # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangHebrewModel.cpp     # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/LangThaiModel.cpp       # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsHebrewProber.cpp      # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsCharSetProber.cpp     # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsBig5Prober.cpp        # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsEUCJPProber.cpp       # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsEUCKRProber.cpp       # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsEUCTWProber.cpp       # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsEscCharsetProber.cpp  # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsEscSM.cpp             # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsGB2312Prober.cpp      # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsMBCSGroupProber.cpp   # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsMBCSSM.cpp            # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsSBCSGroupProber.cpp   # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsSBCharSetProber.cpp   # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsSJISProber.cpp        # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsUTF8Prober.cpp        # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsLatin1Prober.cpp      # required by importmidi_charset.cpp
+      ${PROJECT_SOURCE_DIR}/thirdparty/universalchardet/nsUniversalDetector.cpp # required by importmidi_charset.cpp
       ${OMR_SRC}
       omr
       )

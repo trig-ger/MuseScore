@@ -8,6 +8,7 @@ namespace MidiCharset {
 QString convertToCharset(const std::string &text);
 QString defaultCharset();
 std::string fromUchar(const uchar *text);
+QString detectCharset(const std::string &text);
 
 } // namespace MidiCharset
 } // namespace Ms

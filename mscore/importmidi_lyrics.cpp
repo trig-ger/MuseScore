@@ -204,24 +204,13 @@ void setLyricsFromOperations(const QList<MTrack> &tracks)
             }
       }
 
-void setLyricsToScore(const MidiFile *mf, const QList<MTrack> &tracks)
+QList<std::string> makeLyricsListForUI(unsigned int symbolLimit)
       {
-      if (preferences.midiImportOperations.count() == 0) {
-            extractLyricsToMidiData(mf);
-            setInitialLyricsFromMidiData(tracks);
-            }
-      else {
-            setLyricsFromOperations(tracks);
-            }
-      }
 
-QList<std::string> makeLyricsListForUI()
-      {
       QList<std::string> list;
       const auto *lyrics = preferences.midiImportOperations.getLyrics();
       if (!lyrics)
             return list;
-      const unsigned int symbolLimit = 16;
 
       for (const auto &trackLyric: *lyrics) {
             std::string lyricText;
