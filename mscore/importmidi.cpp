@@ -52,6 +52,7 @@
 #include "importmidi_clef.h"
 #include "importmidi_lrhand.h"
 #include "importmidi_lyrics.h"
+#include "importmidi_charset.h"
 
 #include <set>
 

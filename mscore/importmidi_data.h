@@ -3,7 +3,7 @@
 
 #include "midi/midifile.h"
 #include "importmidi_fraction.h"
-#include "importmidi_inner.h"
+#include "importmidi_charset.h"
 
 
 namespace Ms {

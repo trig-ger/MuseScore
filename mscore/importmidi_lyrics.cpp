@@ -10,6 +10,7 @@
 #include "libmscore/text.h"
 #include "midi/midifile.h"
 #include "preferences.h"
+#include "importmidi_charset.h"
 
 #include <set>
 

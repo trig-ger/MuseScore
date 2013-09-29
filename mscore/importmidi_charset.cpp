@@ -1,4 +1,4 @@
-#include "importmidi_inner.h"
+#include "importmidi_charset.h"
 #include "preferences.h"
 
 
