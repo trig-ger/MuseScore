@@ -71,6 +71,7 @@ struct TrackMeta
       QString instrumentName;
       bool isDrumTrack;
       int initLyricTrackIndex;
+      std::string textForCharset;
       };
 
 struct TrackData

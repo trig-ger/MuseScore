@@ -206,7 +206,6 @@ void setLyricsFromOperations(const QList<MTrack> &tracks)
 
 QList<std::string> makeLyricsListForUI(unsigned int symbolLimit)
       {
-
       QList<std::string> list;
       const auto *lyrics = preferences.midiImportOperations.getLyrics();
       if (!lyrics)

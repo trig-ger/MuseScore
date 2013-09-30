@@ -178,7 +178,8 @@ void MTrack::processMeta(int tick, const MidiEvent& mm)
                               break;
                         }
 
-                  text->setText((const char*)(mm.edata()));
+                  std::string t = MidiCharset::fromUchar(mm.edata());
+                  text->setText(MidiCharset::convertToCharset(t));
 
                   MeasureBase* measure = cs->first();
                   if (measure->type() != Element::VBOX) {
@@ -191,7 +192,10 @@ void MTrack::processMeta(int tick, const MidiEvent& mm)
                   }
                   break;
             case META_COPYRIGHT:
-                  cs->setMetaTag("Copyright", QString((const char*)(mm.edata())));
+                  {
+                  std::string text = MidiCharset::fromUchar(mm.edata());
+                  cs->setMetaTag("Copyright", MidiCharset::convertToCharset(text));
+                  }
                   break;
             case META_TIME_SIGNATURE:
                   cs->sigmap()->add(tick, Fraction(data[0], 1 << data[1]));
@@ -825,11 +829,15 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
       for (int i = 0; i < tracks.size(); ++i) {
             const MTrack &mt = tracks[i];
             std::string trackName;
+            std::string textForCharset;       // for charset recognition
             for (const auto &ie: mt.mtrack->events()) {
                   const MidiEvent &e = ie.second;
-                  if ((e.type() == ME_META) && (e.metaType() == META_TRACK_NAME)) {
-                        trackName = (const char*)e.edata();
-                        break;
+                  if (e.type() == ME_META) {
+                        if (e.metaType() == META_TRACK_NAME)
+                              trackName = MidiCharset::fromUchar(e.edata());
+                        else if (e.metaType() == META_TEXT || e.metaType() == META_LYRIC
+                                 || e.metaType() == META_TITLE || e.metaType() == META_COPYRIGHT)
+                              textForCharset += MidiCharset::fromUchar(e.edata()) + " ";
                         }
                   }
             QString instrName;
@@ -847,7 +855,8 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
             tracksMeta.push_back({trackName,
                                   instrName,
                                   mt.mtrack->drumTrack(),
-                                  mt.initLyricTrackIndex
+                                  mt.initLyricTrackIndex,
+                                  textForCharset
                                  });
             }
       return tracksMeta;
@@ -855,7 +864,6 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
 
       MChord::collectChords(tracks);
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
-      MidiDrum::removeRests(tracks, sigmap);
 void loadMidiData(MidiFile &mf)
       {
       mf.separateChannel();
@@ -902,9 +910,9 @@ QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
 std::string prepareSampleText(const QList<TrackMeta> &tracksMeta)
       {
       std::string text;
-      auto allLyricsList = MidiLyrics::makeLyricsList(std::numeric_limits<unsigned int>::max());
+      auto allLyricsList = MidiLyrics::makeLyricsListForUI(std::numeric_limits<unsigned int>::max());
       for (const auto &t: tracksMeta)
-            text += t.staffName + " ";
+            text += t.staffName + " " + t.textForCharset + " ";
       for (const auto &t: allLyricsList)
             text += t + " ";
       return text;
@@ -934,6 +942,7 @@ void convertMidi(Score *score, const MidiFile *mf, const QString &fileName)
       LRHand::splitIntoLeftRightHands(tracks);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);
+      MidiDrum::removeRests(tracks, sigmap);
       MChord::splitUnequalChords(tracks);
                   // no more track insertion/reordering/deletion from now
       QList<MTrack> trackList = prepareTrackList(tracks);
