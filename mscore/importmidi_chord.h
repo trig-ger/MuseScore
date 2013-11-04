@@ -13,6 +13,7 @@ class MidiNote {
       int pitch;
       int velo;
       ReducedFraction len;
+      ReducedFraction origLen;      // before quantization
       Tie* tie = nullptr;
       };
 
@@ -20,6 +21,7 @@ class MidiChord {
    public:
       int voice = 0;
       QList<MidiNote> notes;
+      ReducedFraction origOnTime;   // before quantization
       };
 
 class MTrack;

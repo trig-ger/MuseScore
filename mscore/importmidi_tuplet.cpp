@@ -817,7 +817,8 @@ void minimizeOffTimeError(std::vector<TupletInfo> &tuplets,
                   leavedIndexes.push_back(i);
                   }
             if (!removedIndexes.empty()) {
-                  MidiChord newTupletChord;
+                  MidiChord newTupletChord = midiChord;           // safer to copy all the chord
+                  newTupletChord.notes.clear();
                   for (const auto &i: leavedIndexes)
                         newTupletChord.notes.push_back(notes[i]);
 

@@ -552,8 +552,10 @@ std::multimap<int, MTrack> createMTrackList(ReducedFraction &lastTick,
                         n.pitch    = pitch;
                         n.velo     = e.velo();
                         n.len      = len;
+                        n.origLen  = len;
 
                         MidiChord c;
+                        c.origOnTime = tick;
                         c.notes.push_back(n);
 
                         track.chords.insert({tick, c});

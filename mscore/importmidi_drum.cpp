@@ -30,7 +30,8 @@ void splitDrumVoices(std::multimap<int, MTrack> &tracks)
                   const auto &onTime = chordEvent.first;
                   auto &chord = chordEvent.second;
                   auto &notes = chord.notes;
-                  MidiChord newChord;
+                  MidiChord newChord = chord;
+                  newChord.notes.clear();
                   newChord.voice = 1;
                               // search for the drumset pitches with voice = 1
                   for (auto it = notes.begin(); it != notes.end(); ) {
@@ -97,10 +98,11 @@ std::map<int, MTrack> splitDrumTrack(const MTrack &drumTrack)
       for (const auto &chordEvent: drumTrack.chords) {
             const auto &onTime = chordEvent.first;
             const MidiChord &chord = chordEvent.second;
+            MidiChord auxiliaryChord = chord;
+            auxiliaryChord.notes.clear();
 
             for (const auto &note: chord.notes) {
-                  MidiChord newChord;
-                  newChord.voice = chord.voice;
+                  MidiChord newChord = auxiliaryChord;
                   newChord.notes.push_back(note);
                   MTrack &newTrack = getNewTrack(newTracks, drumTrack, note.pitch);
                   newTrack.chords.insert({onTime, newChord});

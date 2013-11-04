@@ -215,8 +215,8 @@ void splitUnequalChords(std::multimap<int, MTrack> &tracks)
                         else {
                               ReducedFraction newLen = it->len;
                               if (newLen != len) {
-                                    MidiChord newChord;
-                                    newChord.voice = chord.voice;
+                                    MidiChord newChord = chord;         // safer than copy members
+                                    newChord.notes.clear();             //  separately
                                     for (int j = it - notes.begin(); j > 0; --j)
                                           newChord.notes.push_back(notes[j - 1]);
                                     newChordEvents.push_back({chordEvent.first, newChord});
