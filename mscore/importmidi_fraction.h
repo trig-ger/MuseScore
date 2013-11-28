@@ -14,7 +14,7 @@ class ReducedFraction
       explicit ReducedFraction(const Fraction &);
 
       Fraction fraction() const { return Fraction(numerator_, denominator_); }
-      int numerator() const { return numerator_; }
+      int numerator() const;
       int denominator() const { return denominator_; }
 
       static ReducedFraction fromTicks(int ticks);
@@ -45,8 +45,11 @@ class ReducedFraction
       bool operator!=(const ReducedFraction&) const;
 
    private:
+      int integral_;
       int numerator_;
       int denominator_;
+
+      void extractIntegral();
       };
 
 ReducedFraction toMuseScoreTicks(int tick, int oldDivision);
