@@ -59,6 +59,19 @@ class TestImportMidi : public QObject, public MTest
       void im4() { mf("m4"); }     // voices, typeB, resolve with tie
       void im5() { mf("m5"); }     // same as m1 with division 240
 
+      void fractionConstruct();
+      void fractionFromTicks();
+      void fractionReduced();
+      void fractionAbsValue();
+      void fractionTicks();
+      void fractionPlus();
+      void fractionMinus();
+      void fractionMult();
+      void fractionMultNum();
+      void fractionDiv();
+      void fractionDivNum();
+      void fractionCompare();
+
       // quantization
       void quantDotted4th()
             {
@@ -246,6 +259,159 @@ class TestImportMidi : public QObject, public MTest
 void TestImportMidi::initTestCase()
       {
       initMTest();
+      }
+
+//---------------------------------------------------------
+//   ReducedFraction tests
+//---------------------------------------------------------
+
+void TestImportMidi::fractionConstruct()
+      {
+      {
+      const ReducedFraction f(15, 14);
+      QCOMPARE(f.numerator(), 15);
+      QCOMPARE(f.denominator(), 14);
+      QCOMPARE(f.integral(), 0);
+      }
+      {
+      const ReducedFraction f(6, 14);
+      QCOMPARE(f.numerator(), 3);
+      QCOMPARE(f.denominator(), 7);
+      QCOMPARE(f.integral(), 0);
+      }
+      }
+
+void TestImportMidi::fractionFromTicks()
+      {
+      const auto f = ReducedFraction::fromTicks(1920);
+      QCOMPARE(f.numerator(), f.denominator());
+      QCOMPARE(f.integral(), 0);
+      }
+
+void TestImportMidi::fractionReduced()
+      {
+      ReducedFraction f(6, 8);
+      const auto ff = f.reduced();
+      QCOMPARE(ff.numerator(), 3);
+      QCOMPARE(ff.denominator(), 4);
+      QCOMPARE(ff.integral(), 0);
+      }
+
+void TestImportMidi::fractionAbsValue()
+      {
+      const ReducedFraction f(-36, -11);
+      const auto ff = f.absValue();
+      QCOMPARE(ff.numerator(), 36);
+      QCOMPARE(ff.denominator(), 11);
+      QCOMPARE(ff.integral(), 0);
+      }
+
+void TestImportMidi::fractionTicks()
+      {
+      const ReducedFraction f(6, 1920);
+      QCOMPARE(f.ticks(), 6);
+      }
+
+void TestImportMidi::fractionPlus()
+      {
+      ReducedFraction f1(5, 8);
+      const ReducedFraction f2(3, 7);
+      const auto f3 = f1 + f2;
+      QCOMPARE(f3.numerator(), 59);
+      QCOMPARE(f3.denominator(), 56);
+      QCOMPARE(f3.integral(), 0);
+      f1 += f2;
+      QCOMPARE(f1.numerator(), 59);
+      QCOMPARE(f1.denominator(), 56);
+      QCOMPARE(f1.integral(), 0);
+      }
+
+void TestImportMidi::fractionMinus()
+      {
+      ReducedFraction f1(5, 8);
+      const ReducedFraction f2(3, 7);
+      const auto f3 = f1 - f2;
+      QCOMPARE(f3.numerator(), 11);
+      QCOMPARE(f3.denominator(), 56);
+      QCOMPARE(f3.integral(), 0);
+      f1 -= f2;
+      QCOMPARE(f1.numerator(), 11);
+      QCOMPARE(f1.denominator(), 56);
+      QCOMPARE(f1.integral(), 0);
+      f1 -= f2;
+      QCOMPARE(f1.numerator(), -13);
+      QCOMPARE(f1.denominator(), 56);
+      QCOMPARE(f1.integral(), 0);
+      }
+
+void TestImportMidi::fractionMult()
+      {
+      ReducedFraction f1(5, 8);
+      const ReducedFraction f2(3, 7);
+      const auto f3 = f1 * f2;
+      QCOMPARE(f3.numerator(), 15);
+      QCOMPARE(f3.denominator(), 56);
+      QCOMPARE(f3.integral(), 0);
+      f1 *= f2;
+      QCOMPARE(f1.numerator(), 15);
+      QCOMPARE(f1.denominator(), 56);
+      QCOMPARE(f1.integral(), 0);
+      }
+
+void TestImportMidi::fractionMultNum()
+      {
+      ReducedFraction f(5, 8);
+      const auto ff = f * 18;
+      QCOMPARE(ff.numerator(), 45);
+      QCOMPARE(ff.denominator(), 4);
+      QCOMPARE(ff.integral(), 0);
+      f *= 18;
+      QCOMPARE(f.numerator(), 45);
+      QCOMPARE(f.denominator(), 4);
+      QCOMPARE(f.integral(), 0);
+      }
+
+void TestImportMidi::fractionDiv()
+      {
+      ReducedFraction f1(5, 8);
+      const ReducedFraction f2(3, 7);
+      const auto f3 = f1 / f2;
+      QCOMPARE(f3.numerator(), 35);
+      QCOMPARE(f3.denominator(), 24);
+      QCOMPARE(f3.integral(), 0);
+      f1 /= f2;
+      QCOMPARE(f1.numerator(), 35);
+      QCOMPARE(f1.denominator(), 24);
+      QCOMPARE(f1.integral(), 0);
+      }
+
+void TestImportMidi::fractionDivNum()
+      {
+      ReducedFraction f(5, 8);
+      const auto ff = f / 18;
+      QCOMPARE(ff.numerator(), 5);
+      QCOMPARE(ff.denominator(), 144);
+      QCOMPARE(ff.integral(), 0);
+      f /= 18;
+      QCOMPARE(f.numerator(), 5);
+      QCOMPARE(f.denominator(), 144);
+      QCOMPARE(f.integral(), 0);
+      }
+
+void TestImportMidi::fractionCompare()
+      {
+      const ReducedFraction f1(5, 8);
+      const ReducedFraction f2(3, 7);
+      const ReducedFraction f3(15, 24);
+      const ReducedFraction f4(11, 3);
+      QVERIFY(f1 > f2);
+      QVERIFY(f1 >= f2);
+      QVERIFY(f1 == f3);
+      QVERIFY(f1 >= f3);
+      QVERIFY(f1 <= f3);
+      QVERIFY(f2 < f4);
+      QVERIFY(f2 <= f4);
+      QVERIFY(f2 != f4);
       }
 
 //---------------------------------------------------------
