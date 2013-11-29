@@ -225,7 +225,6 @@ ReducedFraction& ReducedFraction::operator-=(const ReducedFraction& val)
 
 ReducedFraction& ReducedFraction::operator*=(const ReducedFraction& val)
       {
-      this->reduce();
       ReducedFraction value = val;
       value.reduce();
 
@@ -243,12 +242,12 @@ ReducedFraction& ReducedFraction::operator*=(const ReducedFraction& val)
       denominator_ = temp.denominator_;
       checkAdditionOverflow(integral_, temp.integral_);
       integral_ += temp.integral_;
+      reduce();
       return *this;
       }
 
 ReducedFraction& ReducedFraction::operator*=(int val)
       {
-      this->reduce();
       checkMultiplicationOverflow(integral_, val);
       checkMultiplicationOverflow(numerator_, val);
       integral_ *= val;
@@ -260,7 +259,6 @@ ReducedFraction& ReducedFraction::operator*=(int val)
 
 ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
       {
-      this->reduce();
       ReducedFraction value = val;
       value.reduce();
 
@@ -276,14 +274,15 @@ ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
       denominator_ = temp.denominator_;
       checkAdditionOverflow(integral_, temp.integral_);
       integral_ += temp.integral_;
+      reduce();
       return *this;
       }
 
 ReducedFraction& ReducedFraction::operator/=(int val)
       {
-      this->reduce();
       checkMultiplicationOverflow(denominator_, val);
       *this = ReducedFraction(integral_, val) + ReducedFraction(numerator_, denominator_ * val);
+      reduce();
       return *this;
       }
 
@@ -343,9 +342,13 @@ bool ReducedFraction::operator!=(const ReducedFraction& val) const
 
 void ReducedFraction::extractIntegral()
       {
-      checkDivisionOverflow(numerator_, denominator_);
-      integral_ += numerator_ / denominator_;
-      numerator_ %= denominator_;
+//      checkDivisionOverflow(numerator_, denominator_);
+//      integral_ += numerator_ / denominator_;
+//      if (numerator_ < 0) {
+//            numerator_ = -qAbs(numerator_) % denominator_;
+//            }
+//      else
+//            numerator_ %= denominator_;
       }
 
 

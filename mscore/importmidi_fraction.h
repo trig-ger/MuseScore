@@ -14,8 +14,9 @@ class ReducedFraction
       explicit ReducedFraction(const Fraction &);
 
       Fraction fraction() const { return Fraction(numerator_, denominator_); }
-      int numerator() const;
+      int numerator() const;        // as in improper fraction, without integral part
       int denominator() const { return denominator_; }
+      int integral() const { return integral_; }
 
       static ReducedFraction fromTicks(int ticks);
       ReducedFraction reduced() const;
