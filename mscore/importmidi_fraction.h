@@ -13,7 +13,7 @@ class ReducedFraction
       ReducedFraction(int z, int n);
       explicit ReducedFraction(const Fraction &);
 
-      Fraction fraction() const { return Fraction(numerator_, denominator_); }
+      Fraction fraction() const;
       int numerator() const;        // as in improper fraction, without integral part
       int denominator() const { return denominator_; }
       int integral() const { return integral_; }
@@ -51,6 +51,7 @@ class ReducedFraction
       int denominator_;
 
       void extractIntegral();
+      static ReducedFraction withPositiveNumerator(const ReducedFraction &f);
       };
 
 ReducedFraction toMuseScoreTicks(int tick, int oldDivision);

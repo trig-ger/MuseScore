@@ -122,7 +122,6 @@ ReducedFraction::ReducedFraction(int z, int n)
       , denominator_(n)
       {
       extractIntegral();
-      reduce();
       }
 
 ReducedFraction::ReducedFraction(const Fraction &fraction)
@@ -131,7 +130,11 @@ ReducedFraction::ReducedFraction(const Fraction &fraction)
       , denominator_(fraction.denominator())
       {
       extractIntegral();
-      reduce();
+      }
+
+Fraction ReducedFraction::fraction() const
+      {
+      return Fraction(numerator(), denominator_);
       }
 
 int ReducedFraction::numerator() const
@@ -171,7 +174,7 @@ int ReducedFraction::ticks() const
       checkDivisionOverflow(tmp, denominator_);
       checkMultiplicationOverflow(integral_, denominator_);
 
-      return tmp / denominator_ + integral_ * denominator_;
+      return tmp / denominator_ + integral_ * MScore::division * 4;
       }
 
 void ReducedFraction::reduce()
@@ -190,7 +193,7 @@ int fractionPart(int lcmPart, int numerator, int denominator)
       checkDivisionOverflow(lcmPart, denominator);
       const int part = lcmPart / denominator;
       checkMultiplicationOverflow(numerator, part);
-      return part;
+      return numerator * part;
       }
 
 ReducedFraction& ReducedFraction::operator+=(const ReducedFraction& val)
@@ -200,8 +203,8 @@ ReducedFraction& ReducedFraction::operator+=(const ReducedFraction& val)
 
       integral_ += value.integral_;
       const int tmp = lcm(denominator_, value.denominator_);
-      numerator_ = numerator_ * fractionPart(tmp, numerator_, denominator_)
-                  + value.numerator_ * fractionPart(tmp, value.numerator_, value.denominator_);
+      numerator_ = fractionPart(tmp, numerator_, denominator_)
+                  + fractionPart(tmp, value.numerator_, value.denominator_);
       denominator_ = tmp;
       extractIntegral();
       reduce();
@@ -215,8 +218,8 @@ ReducedFraction& ReducedFraction::operator-=(const ReducedFraction& val)
 
       integral_ -= value.integral_;
       const int tmp = lcm(denominator_, value.denominator_);
-      numerator_ = numerator_ * fractionPart(tmp, numerator_, denominator_)
-                  - value.numerator_ * fractionPart(tmp, value.numerator_, value.denominator_);
+      numerator_ = fractionPart(tmp, numerator_, denominator_)
+                  - fractionPart(tmp, value.numerator_, value.denominator_);
       denominator_ = tmp;
       extractIntegral();
       reduce();
@@ -229,19 +232,15 @@ ReducedFraction& ReducedFraction::operator*=(const ReducedFraction& val)
       value.reduce();
 
       checkMultiplicationOverflow(integral_, value.integral_);
-      integral_ *= value.integral_;
       checkMultiplicationOverflow(value.integral_, numerator_);
       checkMultiplicationOverflow(integral_, value.numerator_);
       checkMultiplicationOverflow(numerator_, value.numerator_);
       checkMultiplicationOverflow(denominator_, value.denominator_);
                   // constructor automatically extracts integral part => less probability of overflow
-      const auto temp = ReducedFraction(value.integral_ * numerator_, denominator_)
+      *this = ReducedFraction(integral_ * value.integral_, 1)
+                  + ReducedFraction(value.integral_ * numerator_, denominator_)
                   + ReducedFraction(integral_ * value.numerator_, value.denominator_)
                   + ReducedFraction(numerator_ * value.numerator_, denominator_ * value.denominator_);
-      numerator_ = temp.numerator_;
-      denominator_ = temp.denominator_;
-      checkAdditionOverflow(integral_, temp.integral_);
-      integral_ += temp.integral_;
       reduce();
       return *this;
       }
@@ -267,13 +266,9 @@ ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
       checkMultiplicationOverflow(value.integral_, value.denominator_);
       checkAdditionOverflow(value.integral_ * value.denominator_, value.numerator_);
 
-      const auto temp = ReducedFraction(integral_ * denominator_ + numerator_,
-                      value.integral_ * value.denominator_ + value.numerator_)
+      *this = ReducedFraction(integral_ * denominator_ + numerator_,
+                              value.integral_ * value.denominator_ + value.numerator_)
                   * ReducedFraction(value.denominator_, denominator_);
-      numerator_ = temp.numerator_;
-      denominator_ = temp.denominator_;
-      checkAdditionOverflow(integral_, temp.integral_);
-      integral_ += temp.integral_;
       reduce();
       return *this;
       }
@@ -281,74 +276,99 @@ ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
 ReducedFraction& ReducedFraction::operator/=(int val)
       {
       checkMultiplicationOverflow(denominator_, val);
-      *this = ReducedFraction(integral_, val) + ReducedFraction(numerator_, denominator_ * val);
+      *this = ReducedFraction(integral_, val)
+                  + ReducedFraction(numerator_, denominator_ * val);
       reduce();
       return *this;
       }
 
 bool ReducedFraction::operator<(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
-            return integral_ < val.integral_;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  < val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
+            return f1.integral_ < f2.integral_;
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  < fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 bool ReducedFraction::operator<=(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
-            return integral_ < val.integral_;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  <= val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
+            return f1.integral_ < val.integral_;
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  <= fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 bool ReducedFraction::operator>(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
-            return integral_ > val.integral_;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  > val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
+            return f1.integral_ > f2.integral_;
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  > fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 bool ReducedFraction::operator>=(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
-            return integral_ > val.integral_;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  >= val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
+            return f1.integral_ > f2.integral_;
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  >= fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 bool ReducedFraction::operator==(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
             return false;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  == val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  == fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 bool ReducedFraction::operator!=(const ReducedFraction& val) const
       {
-      if (integral_ != val.integral_)
+      const auto f1 = withPositiveNumerator(*this);
+      const auto f2 = withPositiveNumerator(val);
+      if (f1.integral_ != f2.integral_)
             return true;
-      const int v = lcm(denominator_, val.denominator_);
-      return numerator_ * fractionPart(v, numerator_, denominator_)
-                  != val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
+      const int v = lcm(f1.denominator_, f2.denominator_);
+      return fractionPart(v, f1.numerator_, f1.denominator_)
+                  != fractionPart(v, f2.numerator_, f2.denominator_);
       }
 
 void ReducedFraction::extractIntegral()
       {
-//      checkDivisionOverflow(numerator_, denominator_);
-//      integral_ += numerator_ / denominator_;
+      checkDivisionOverflow(numerator_, denominator_);
+      integral_ += numerator_ / denominator_;
+      numerator_ %= denominator_;
 //      if (numerator_ < 0) {
 //            numerator_ = -qAbs(numerator_) % denominator_;
 //            }
 //      else
-//            numerator_ %= denominator_;
+      //            numerator_ %= denominator_;
+      }
+
+ReducedFraction ReducedFraction::withPositiveNumerator(const ReducedFraction &f)
+      {
+      if (f.numerator_ >= 0)
+            return f;
+      ReducedFraction ff;
+      ff.numerator_ = f.numerator_ + f.denominator_;
+      ff.integral_ = f.integral_ - 1;
+      ff.denominator_ = f.denominator_;
+      return ff;
       }
 
 
