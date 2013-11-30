@@ -1,21 +1,21 @@
 #ifndef IMPORTMIDI_FRACTION_H
 #define IMPORTMIDI_FRACTION_H
 
-#include "libmscore/fraction.h"
-
 
 namespace Ms {
+
+class Fraction;
 
 class ReducedFraction
       {
    public:
       ReducedFraction();
-      ReducedFraction(int z, int n);
+      ReducedFraction(qint64 z, qint64 n);
       explicit ReducedFraction(const Fraction &);
 
-      Fraction fraction() const { return Fraction(numerator_, denominator_); }
-      int numerator() const { return numerator_; }
-      int denominator() const { return denominator_; }
+      Fraction fraction() const;
+      qint64 numerator() const { return numerator_; }
+      qint64 denominator() const { return denominator_; }
 
       static ReducedFraction fromTicks(int ticks);
       ReducedFraction reduced() const;
@@ -26,16 +26,16 @@ class ReducedFraction
       ReducedFraction& operator+=(const ReducedFraction&);
       ReducedFraction& operator-=(const ReducedFraction&);
       ReducedFraction& operator*=(const ReducedFraction&);
-      ReducedFraction& operator*=(int);
+      ReducedFraction& operator*=(qint64);
       ReducedFraction& operator/=(const ReducedFraction&);
-      ReducedFraction& operator/=(int);
+      ReducedFraction& operator/=(qint64);
 
       ReducedFraction operator+(const ReducedFraction& v) const { return ReducedFraction(*this) += v; }
       ReducedFraction operator-(const ReducedFraction& v) const { return ReducedFraction(*this) -= v; }
       ReducedFraction operator*(const ReducedFraction& v) const { return ReducedFraction(*this) *= v; }
-      ReducedFraction operator*(int v)                    const { return ReducedFraction(*this) *= v; }
+      ReducedFraction operator*(qint64 v)                 const { return ReducedFraction(*this) *= v; }
       ReducedFraction operator/(const ReducedFraction& v) const { return ReducedFraction(*this) /= v; }
-      ReducedFraction operator/(int v)                    const { return ReducedFraction(*this) /= v; }
+      ReducedFraction operator/(qint64 v)                 const { return ReducedFraction(*this) /= v; }
 
       bool operator<(const ReducedFraction&) const;
       bool operator<=(const ReducedFraction&) const;
@@ -45,8 +45,8 @@ class ReducedFraction
       bool operator!=(const ReducedFraction&) const;
 
    private:
-      int numerator_;
-      int denominator_;
+      qint64 numerator_;
+      qint64 denominator_;
       };
 
 ReducedFraction toMuseScoreTicks(int tick, int oldDivision);

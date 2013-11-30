@@ -1,4 +1,5 @@
 #include "importmidi_fraction.h"
+#include "libmscore/fraction.h"
 #include "libmscore/mscore.h"
 
 #include <limits>
@@ -12,47 +13,50 @@ namespace Ms {
 //
 // Access date: 2013.11.28
 
-void checkAdditionOverflow(int a, int b)           // a + b
+template<typename T>
+void checkAdditionOverflow(T a, T b)           // a + b
       {
-      if ((b > 0 && a > (std::numeric_limits<int>::max() - b))
-                  || (b < 0 && a < std::numeric_limits<int>::min() - b))
+      if ((b > 0 && a > (std::numeric_limits<T>::max() - b))
+                  || (b < 0 && a < std::numeric_limits<T>::min() - b))
             {
             qDebug("ReducedFraction: addition overflow");
             abort();
             }
       }
 
-void checkSubtractionOverflow(int a, int b)        // a - b
+template<typename T>
+void checkSubtractionOverflow(T a, T b)        // a - b
       {
-      if ((b > 0 && a < std::numeric_limits<int>::min() + b)
-                  || (b < 0 && a > std::numeric_limits<int>::max() + b))
+      if ((b > 0 && a < std::numeric_limits<T>::min() + b)
+                  || (b < 0 && a > std::numeric_limits<T>::max() + b))
             {
             qDebug("ReducedFraction: subtraction overflow");
             abort();
             }
       }
 
-void checkMultiplicationOverflow(int a, int b)     // a * b
+template<typename T>
+void checkMultiplicationOverflow(T a, T b)     // a * b
       {
       bool flag = false;
 
       if (a > 0) {
             if (b > 0) {
-                  if (a > std::numeric_limits<int>::max() / b)
+                  if (a > std::numeric_limits<T>::max() / b)
                         flag = true;
                   }
             else {
-                  if (b < std::numeric_limits<int>::min() / a)
+                  if (b < std::numeric_limits<T>::min() / a)
                         flag = true;
                   }
             }
       else {
             if (b > 0) {
-                  if (a < std::numeric_limits<int>::min() / b)
+                  if (a < std::numeric_limits<T>::min() / b)
                         flag = true;
                   }
             else {
-                  if (a != 0 && b < std::numeric_limits<int>::max() / a)
+                  if (a != 0 && b < std::numeric_limits<T>::max() / a)
                         flag = true;
                   }
             }
@@ -63,26 +67,39 @@ void checkMultiplicationOverflow(int a, int b)     // a * b
             }
       }
 
-void checkDivisionOverflow(int a, int b)           // a / b
+template<typename T>
+void checkDivisionOverflow(T a, T b)           // a / b
       {
-      if ((b == 0) || ((a == std::numeric_limits<int>::min()) && (b == -1))) {
+      if ((b == 0) || ((a == std::numeric_limits<T>::min()) && (b == -1))) {
             qDebug("ReducedFraction: division overflow");
             abort();
             }
       }
 
-void checkRemainderOverflow(int a, int b)          // a % b
+template<typename T>
+void checkRemainderOverflow(T a, T b)          // a % b
       {
-      if ((b == 0) || ((a == std::numeric_limits<int>::min()) && (b == -1))) {
+      if ((b == 0) || ((a == std::numeric_limits<T>::min()) && (b == -1))) {
             qDebug("ReducedFraction: remainder overflow");
             abort();
             }
       }
 
-void checkUnaryNegationOverflow(int a)             // -a
+template<typename T>
+void checkUnaryNegationOverflow(T a)           // -a
       {
-      if (a == std::numeric_limits<int>::min()) {
+      if (a == std::numeric_limits<T>::min()) {
             qDebug("ReducedFraction: unary nagation overflow");
+            abort();
+            }
+      }
+
+template<typename T1, typename T2>
+void checkCast(T1 from)
+      {
+      if (from > std::numeric_limits<T2>::max()
+                  || from < std::numeric_limits<T2>::min()) {
+            qDebug("ReducedFraction: type cast overflow");
             abort();
             }
       }
@@ -93,7 +110,7 @@ namespace {
 
 // greatest common divisor
 
-int gcd(int a, int b)
+qint64 gcd(qint64 a, qint64 b)
       {
       checkUnaryNegationOverflow(a);
       if (b == 0)
@@ -104,9 +121,9 @@ int gcd(int a, int b)
 
 // least common multiple
 
-unsigned lcm(int a, int b)
+qint64 lcm(qint64 a, qint64 b)
       {
-      const int tmp = gcd(a, b);
+      const auto tmp = gcd(a, b);
       checkMultiplicationOverflow(a, b);
       checkDivisionOverflow(a * b, tmp);
       return a * b / tmp;
@@ -123,7 +140,7 @@ ReducedFraction::ReducedFraction()
       {
       }
 
-ReducedFraction::ReducedFraction(int z, int n)
+ReducedFraction::ReducedFraction(qint64 z, qint64 n)
       : numerator_(z)
       , denominator_(n)
       {
@@ -135,6 +152,11 @@ ReducedFraction::ReducedFraction(const Fraction &fraction)
       {
       }
 
+Fraction ReducedFraction::fraction() const
+      {
+      return Fraction(numerator_, denominator_);
+      }
+
 ReducedFraction ReducedFraction::fromTicks(int ticks)
       {
       return ReducedFraction(ticks, MScore::division * 4).reduced();
@@ -142,7 +164,7 @@ ReducedFraction ReducedFraction::fromTicks(int ticks)
 
 ReducedFraction ReducedFraction::reduced() const
       {
-      const int tmp = gcd(numerator_, denominator_);
+      const auto tmp = gcd(numerator_, denominator_);
       checkDivisionOverflow(numerator_, tmp);
       checkDivisionOverflow(denominator_, tmp);
       return ReducedFraction(numerator_ / tmp, denominator_ / tmp);
@@ -155,17 +177,19 @@ ReducedFraction ReducedFraction::absValue() const
 
 int ReducedFraction::ticks() const
       {
-      checkMultiplicationOverflow(numerator_, MScore::division * 4);
+      checkMultiplicationOverflow(numerator_, static_cast<qint64>(MScore::division * 4));
       checkAdditionOverflow(numerator_ * MScore::division * 4, denominator_ / 2);
-      const int tmp = numerator_ * MScore::division * 4 + denominator_ / 2;
+      const auto tmp = numerator_ * MScore::division * 4 + denominator_ / 2;
       checkDivisionOverflow(tmp, denominator_);
+      const auto result = tmp / denominator_;
+      checkCast<qint64, int>(result);
 
-      return tmp / denominator_;
+      return static_cast<int>(result);
       }
 
 void ReducedFraction::reduce()
       {
-      const int tmp = gcd(numerator_, denominator_);
+      const auto tmp = gcd(numerator_, denominator_);
       checkDivisionOverflow(numerator_, tmp);
       checkDivisionOverflow(denominator_, tmp);
       numerator_ /= tmp;
@@ -174,21 +198,21 @@ void ReducedFraction::reduce()
 
 // helper function
 
-int fractionPart(int lcmPart, int numerator, int denominator)
+qint64 fractionPart(qint64 lcmPart, qint64 numerator, qint64 denominator)
       {
       checkDivisionOverflow(lcmPart, denominator);
-      const int part = lcmPart / denominator;
+      const auto part = lcmPart / denominator;
       checkMultiplicationOverflow(numerator, part);
       return part;
       }
 
 ReducedFraction& ReducedFraction::operator+=(const ReducedFraction& val)
       {
-      this->reduce();
+      reduce();
       ReducedFraction value = val;
       value.reduce();
 
-      const int tmp = lcm(denominator_, val.denominator_);
+      const auto tmp = lcm(denominator_, val.denominator_);
       numerator_ = numerator_ * fractionPart(tmp, numerator_, denominator_)
                   + val.numerator_ * fractionPart(tmp, val.numerator_, val.denominator_);
       denominator_ = tmp;
@@ -197,11 +221,11 @@ ReducedFraction& ReducedFraction::operator+=(const ReducedFraction& val)
 
 ReducedFraction& ReducedFraction::operator-=(const ReducedFraction& val)
       {
-      this->reduce();
+      reduce();
       ReducedFraction value = val;
       value.reduce();
 
-      const int tmp = lcm(denominator_, val.denominator_);
+      const auto tmp = lcm(denominator_, val.denominator_);
       numerator_ = numerator_ * fractionPart(tmp, numerator_, denominator_)
                   - val.numerator_ * fractionPart(tmp, val.numerator_, val.denominator_);
       denominator_ = tmp;
@@ -210,7 +234,7 @@ ReducedFraction& ReducedFraction::operator-=(const ReducedFraction& val)
 
 ReducedFraction& ReducedFraction::operator*=(const ReducedFraction& val)
       {
-      this->reduce();
+      reduce();
       ReducedFraction value = val;
       value.reduce();
 
@@ -221,9 +245,9 @@ ReducedFraction& ReducedFraction::operator*=(const ReducedFraction& val)
       return *this;
       }
 
-ReducedFraction& ReducedFraction::operator*=(int val)
+ReducedFraction& ReducedFraction::operator*=(qint64 val)
       {
-      this->reduce();
+      reduce();
       checkMultiplicationOverflow(numerator_, val);
       numerator_ *= val;
       return *this;
@@ -231,7 +255,7 @@ ReducedFraction& ReducedFraction::operator*=(int val)
 
 ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
       {
-      this->reduce();
+      reduce();
       ReducedFraction value = val;
       value.reduce();
 
@@ -242,9 +266,9 @@ ReducedFraction& ReducedFraction::operator/=(const ReducedFraction& val)
       return *this;
       }
 
-ReducedFraction& ReducedFraction::operator/=(int val)
+ReducedFraction& ReducedFraction::operator/=(qint64 val)
       {
-      this->reduce();
+      reduce();
       checkMultiplicationOverflow(denominator_, val);
       denominator_ *= val;
       return *this;
@@ -252,42 +276,42 @@ ReducedFraction& ReducedFraction::operator/=(int val)
 
 bool ReducedFraction::operator<(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   < val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
 
 bool ReducedFraction::operator<=(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   <= val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
 
 bool ReducedFraction::operator>(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   > val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
 
 bool ReducedFraction::operator>=(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   >= val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
 
 bool ReducedFraction::operator==(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   == val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
 
 bool ReducedFraction::operator!=(const ReducedFraction& val) const
       {
-      const int v = lcm(denominator_, val.denominator_);
+      const auto v = lcm(denominator_, val.denominator_);
       return numerator_ * fractionPart(v, numerator_, denominator_)
                   != val.numerator_ * fractionPart(v, val.numerator_, val.denominator_);
       }
@@ -297,12 +321,17 @@ bool ReducedFraction::operator!=(const ReducedFraction& val) const
 
 ReducedFraction toMuseScoreTicks(int tick, int oldDivision)
       {
-      checkMultiplicationOverflow(tick, MScore::division);
-      checkAdditionOverflow(tick * MScore::division, oldDivision / 2);
-      const int tmp = tick * MScore::division + oldDivision / 2;
-      checkDivisionOverflow(tmp, oldDivision);
+      const auto bigTick = static_cast<qint64>(tick);
+      const auto bigDiv = static_cast<qint64>(oldDivision);
 
-      return ReducedFraction::fromTicks(tmp / oldDivision);
+      checkMultiplicationOverflow(bigTick, static_cast<qint64>(MScore::division));
+      checkAdditionOverflow(bigTick * MScore::division, bigDiv / 2);
+      const auto tmp = bigTick * MScore::division + bigDiv / 2;
+      checkDivisionOverflow(tmp, bigDiv);
+      const auto result = tmp / bigDiv;
+      checkCast<qint64, int>(result);
+
+      return ReducedFraction::fromTicks(static_cast<int>(result));
       }
 
 } // namespace Ms
