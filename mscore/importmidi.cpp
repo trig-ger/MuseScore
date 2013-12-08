@@ -861,11 +861,12 @@ void convertMidi(Score *score, const MidiFile *mf)
       auto *sigmap = score->sigmap();
 
       auto tracks = createMTrackList(lastTick, sigmap, mf);
-      MChord::collectChords(tracks);
       cleanUpMidiEvents(tracks);
+      MChord::collectChords(tracks);
       MChord::removeOverlappingNotes(tracks);
       quantizeAllTracks(tracks, sigmap, lastTick);
       MChord::removeOverlappingNotes(tracks);
+      MChord::mergeChordsWithEqualOnTime(tracks);
       LRHand::splitIntoLeftRightHands(tracks);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);
