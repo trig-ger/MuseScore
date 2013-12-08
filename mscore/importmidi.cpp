@@ -101,7 +101,9 @@ void quantizeAllTracks(std::multimap<int, MTrack> &tracks,
                         // pass current track index through MidiImportOperations
                         // for further usage
             opers.setCurrentTrack(mtrack.indexOfOperation);
-            opers.adaptForPercussion(mtrack.indexOfOperation, mtrack.mtrack->drumTrack());
+                        // small hack: don't use multiple voices for tuplets in drum track
+            if (mtrack.mtrack->drumTrack())
+                  opers.removeMultipleVoices(mtrack.indexOfOperation);
             mtrack.tuplets = MidiTuplet::findAllTuplets(mtrack.chords, sigmap, lastTick);
             Quantize::quantizeChords(mtrack.chords, mtrack.tuplets, sigmap);
             }

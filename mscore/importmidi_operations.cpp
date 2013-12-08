@@ -52,13 +52,12 @@ QString MidiImportOperations::charset() const
       return midiData_.charset(currentMidiFile_);
       }
 
-void MidiImportOperations::adaptForPercussion(int trackIndex, bool isDrumTrack)
+void MidiImportOperations::removeMultipleVoices(int trackIndex)
       {
-                  // small hack: don't use multiple voices for tuplets
       if (isValidIndex(trackIndex))
-            operations_[trackIndex].useMultipleVoices = !isDrumTrack;
+            operations_[trackIndex].useMultipleVoices = false;
       else
-            defaultOpers.useMultipleVoices = !isDrumTrack;
+            defaultOpers.useMultipleVoices = false;
       }
 
 void MidiImportOperations::addTrackLyrics(const std::multimap<ReducedFraction, std::string> &trackLyrics)
