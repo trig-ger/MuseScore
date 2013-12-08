@@ -7,12 +7,33 @@
 #include "importmidi_tuplet.h"
 #include "libmscore/score.h"
 
+#include <set>
+
 
 namespace Ms {
 
 extern Preferences preferences;
 
 namespace MidiDrum {
+
+void checkChords(const std::multimap<ReducedFraction, MidiChord> &chords)
+      {
+      std::set<ReducedFraction> onTimes;
+      for (const auto &chordEvent: chords) {
+            if (chordEvent.second.voice != 0) {
+                  qDebug() << "MidiDrum::checkChords: chord voice is not equal to zero";
+                  abort();
+                  }
+            if (onTimes.find(chordEvent.first) == onTimes.end()) {
+                  onTimes.insert(chordEvent.first);
+                  }
+            else {
+                  qDebug() << "MidiDrum::checkChords: onTime values of chords are equal "
+                              "but should be different";
+                  abort();
+                  }
+            }
+      }
 
 void splitDrumVoices(std::multimap<int, MTrack> &tracks)
       {
@@ -26,6 +47,8 @@ void splitDrumVoices(std::multimap<int, MTrack> &tracks)
                               // all chords of drum track should have voice == 0
                               // because useMultipleVoices == false (see MidiImportOperations)
                               // also, all chords should have different onTime values
+            checkChords(chords);
+
             for (auto &chordEvent: chords) {
                   const auto &onTime = chordEvent.first;
                   auto &chord = chordEvent.second;
