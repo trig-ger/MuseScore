@@ -862,8 +862,6 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
       return tracksMeta;
       }
 
-      MChord::collectChords(tracks);
-      MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
 void loadMidiData(MidiFile &mf)
       {
       mf.separateChannel();
@@ -939,6 +937,7 @@ void convertMidi(Score *score, const MidiFile *mf, const QString &fileName)
       MChord::removeOverlappingNotes(tracks);
       quantizeAllTracks(tracks, sigmap, lastTick);
       MChord::removeOverlappingNotes(tracks);
+      MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
       LRHand::splitIntoLeftRightHands(tracks);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);
