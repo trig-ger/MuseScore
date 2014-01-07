@@ -300,6 +300,7 @@ target_link_libraries(mscore
           fluid
           effects
           vorbisfile
+      beatroot
           )
 if (ZERBERUS)
           target_link_libraries(mscore zerberus synthesizer)

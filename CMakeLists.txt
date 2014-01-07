@@ -162,7 +162,7 @@ SET(QT_USE_QTDECLARATIVE TRUE)
 ##
 
 if (APPLE OR MINGW)
-	message("Disabling ALSA support due to OS X or MINGW build.")
+        message("Disabling ALSA support due to OS X or MINGW build.")
       set (USE_ALSA 0)
       set (HAS_MIDI 1)
 else (APPLE OR MINGW)
@@ -170,7 +170,7 @@ else (APPLE OR MINGW)
       if (NOT ALSA_INCDIR)
             message(FATAL_ERROR "Fatal error: ALSA >= 1.0.0 required")
       else (NOT ALSA_INCDIR)
-	      message("Alsa detected.")
+              message("Alsa detected.")
             set (USE_ALSA 1)
             set (HAS_MIDI 1)
       endif (NOT ALSA_INCDIR)
@@ -374,7 +374,7 @@ ADD_CUSTOM_TARGET(mops2 DEPENDS ${PCH})
 ##
 subdirs(
       mscore  awl bww2mxml share midi audiofile fluid mstyle libmscore synthesizer
-      effects thirdparty/rtf2html thirdparty/diff
+      effects thirdparty/rtf2html thirdparty/diff thirdparty/beatroot
       )
 
 add_subdirectory(mtest EXCLUDE_FROM_ALL)
