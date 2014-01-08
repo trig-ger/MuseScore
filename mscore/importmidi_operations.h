@@ -30,7 +30,7 @@ struct Quantization
       {
       MidiOperation::QuantValue value = MidiOperation::QuantValue::FROM_PREFERENCES;
       bool reduceToShorterNotesInBar = true;
-      bool humanPerformance = false;
+      bool humanPerformance = true;
       };
 
 struct LHRHSeparation
@@ -106,6 +106,9 @@ class MidiImportOperations
                   // lyrics
       void addTrackLyrics(const std::multimap<ReducedFraction, std::string> &trackLyrics);
       const QList<std::multimap<ReducedFraction, std::string> > *getLyrics();
+                  // human performance: is MIDI unaligned
+      const std::set<ReducedFraction>* getHumanBeats() const;
+      void setHumanBeats(const std::set<ReducedFraction> &humanBeats);
 
    private:
       QList<TrackOperations> operations_;

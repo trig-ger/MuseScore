@@ -341,8 +341,8 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
       updateUi();
 
       if (isMidiFileExists()) {
-            QList<TrackData> trackData
-                        = preferences.midiImportOperations.midiData().tracksData(fileName);
+            auto &midiData = preferences.midiImportOperations.midiData();
+            QList<TrackData> trackData = midiData.tracksData(fileName);
             if (trackData.isEmpty()) {          // open new MIDI file
                   resetTableViewState();
                   clearMidiPrefOperations();
@@ -350,10 +350,9 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
                   tracksModel->reset(tracksMeta);
                   tracksModel->setLyricsList(MidiLyrics::makeLyricsListForUI());
                   showOrHideStaffNameCol(tracksMeta);
-                  operationsModel->reset(tracksMeta.size());
                   for (int i = 0; i != tracksModel->trackCount(); ++i)
                         trackData.push_back(tracksModel->trackData(i));
-                  preferences.midiImportOperations.midiData().setTracksData(fileName, trackData);
+                  midiData.setTracksData(fileName, trackData);
                   showOrHideLyricsCol(trackData);
                   saveTableViewState(fileName);
                   }
@@ -363,6 +362,7 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
                   tracksModel->setLyricsList(MidiLyrics::makeLyricsListForUI());
                   restoreTableViewState(fileName);
                   }
+            operationsModel->reset(!midiData.getHumanBeats(fileName)->empty());
             ui->comboBoxCharset->setCurrentText(preferences.midiImportOperations.charset());
             ui->tableViewTracks->selectRow(
                               preferences.midiImportOperations.midiData().selectedRow(midiFile));

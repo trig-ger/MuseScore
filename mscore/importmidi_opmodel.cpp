@@ -34,9 +34,9 @@ struct Controller {
       Node *clef = nullptr;
       Node *removeDrumRests = nullptr;
 
-      int trackCount = 0;
       bool isDrumTrack = false;
       bool allTracksSelected = true;
+      bool showHumanQuant = false;
 
       bool updateNodeDependencies(Node *node, bool forceUpdate);
       };
@@ -70,6 +70,14 @@ OperationsModel::OperationsModel()
       reduceToShorter->oper.value = Quantization().reduceToShorterNotesInBar;
       reduceToShorter->parent = quantValue;
       quantValue->children.push_back(std::unique_ptr<Node>(reduceToShorter));
+
+      Node *humanPerformance = new Node;
+      humanPerformance->name = "Human performance";
+      humanPerformance->oper.type = MidiOperation::Type::QUANT_HUMAN;
+      humanPerformance->oper.value = Quantization().humanPerformance;
+      humanPerformance->parent = quantValue;
+      quantValue->children.push_back(std::unique_ptr<Node>(humanPerformance));
+      controller->quantHuman = humanPerformance;
 
       Node *useDots = new Node;
       useDots->name = QCoreApplication::translate("MIDI import operations", "Use dots");
@@ -281,9 +289,9 @@ OperationsModel::~OperationsModel()
       {
       }
 
-void OperationsModel::reset(int trackCount)
+void OperationsModel::reset(bool showHumanQuant)
       {
-      controller->trackCount = trackCount;
+      controller->showHumanQuant = showHumanQuant;
       }
 
 QModelIndex OperationsModel::index(int row, int column, const QModelIndex &parent) const
@@ -621,6 +629,12 @@ bool Controller::updateNodeDependencies(Node *node, bool forceUpdate)
                   showStaffBracket->visible = value;
             result = true;
             }
+      if (quantHuman) {
+            if (showHumanQuant != quantHuman->visible) {
+                  quantHuman->visible = showHumanQuant;
+                  result = true;
+                  }
+            }
       if (forceUpdate) {
             if (LHRHdoIt)
                   LHRHdoIt->visible = !isDrumTrack;
@@ -634,6 +648,8 @@ bool Controller::updateNodeDependencies(Node *node, bool forceUpdate)
                   clef->visible = !isDrumTrack;
             if (pickupMeasure)
                   pickupMeasure->visible = allTracksSelected;
+            if (quantHuman)
+                  quantHuman->visible = showHumanQuant && allTracksSelected;
             result = true;
             }
 
