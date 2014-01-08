@@ -915,7 +915,12 @@ void convertMidi(Score *score, const MidiFile *mf)
 
       auto tracks = createMTrackList(lastTick, sigmap, mf);
       cleanUpMidiEvents(tracks);
+      const auto &opers = preferences.midiImportOperations;
+      if (opers.count() == 0)
+            Quantize::checkForHumanPerformance(tracks, sigmap);
+
       MChord::collectChords(tracks);
+      Quantize::adjustChordsToBeats(tracks, lastTick);
       MChord::removeOverlappingNotes(tracks);
 
       Q_ASSERT_X(!doNotesOverlap(tracks),
@@ -954,6 +959,8 @@ void loadMidiData(MidiFile &mf)
       mf.setMidiType(mt);
       }
 
+// for new MIDI file called AFTER importMidi
+
 QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
       {
       if (fileName.isEmpty())
@@ -981,7 +988,7 @@ QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
       Score mockScore;
       ReducedFraction lastTick;
       const MidiFile *mf = midiData.midiFile(fileName);
-      const auto tracks = createMTrackList(lastTick, mockScore.sigmap(), mf);
+      auto tracks = createMTrackList(lastTick, mockScore.sigmap(), mf);
       QList<MTrack> trackList = prepareTrackList(tracks);
       MidiLyrics::assignLyricsToTracks(trackList);
 
@@ -991,6 +998,8 @@ QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
 //---------------------------------------------------------
 //   importMidi
 //---------------------------------------------------------
+
+// for new MIDI file called BEFORE extractMidiTracksMeta
 
 Score::FileError importMidi(Score *score, const QString &name)
       {

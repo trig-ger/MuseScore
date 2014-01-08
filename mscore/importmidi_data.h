@@ -5,6 +5,8 @@
 #include "importmidi_fraction.h"
 #include "importmidi_inner.h"
 
+#include <set>
+
 
 namespace Ms {
 
@@ -29,8 +31,12 @@ class MidiData
                           const std::multimap<ReducedFraction,  std::string> &trackLyrics);
       const QList<std::multimap<ReducedFraction, std::string> > *
             getLyrics(const QString &fileName);
+                  // charset
       QString charset(const QString &fileName) const;
       void setCharset(const QString &fileName, const QString &charset);
+                  // human performance: is MIDI unaligned
+      const std::set<ReducedFraction>* getHumanBeats(const QString &fileName) const;
+      void setHumanBeats(const QString &fileName, const std::set<ReducedFraction> &humanBeats);
 
    private:
       struct MidiDataStore
@@ -43,6 +49,7 @@ class MidiData
             int selectedRow = 0;
             MidiFile midiFile;
             QString charset = MidiCharset::defaultCharset();
+            std::set<ReducedFraction> humanBeats;
             };
       QMap<QString, MidiDataStore> data;    // <file name, tracks data>
       };

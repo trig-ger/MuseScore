@@ -70,11 +70,24 @@ void MidiImportOperations::addTrackLyrics(const std::multimap<ReducedFraction, s
       midiData_.addTrackLyrics(currentMidiFile_, trackLyrics);
       }
 
-const QList<std::multimap<ReducedFraction, std::string>>*
+const QList<std::multimap<ReducedFraction, std::string> >*
 MidiImportOperations::getLyrics()
       {
       return midiData_.getLyrics(currentMidiFile_);
       }
+
+const std::set<ReducedFraction>*
+MidiImportOperations::getHumanBeats() const
+      {
+      return midiData_.getHumanBeats(currentMidiFile_);
+      }
+
+void MidiImportOperations::setHumanBeats(const std::set<ReducedFraction> &humanBeats)
+      {
+      return midiData_.setHumanBeats(currentMidiFile_, humanBeats);
+      }
+
+
 
 } // namespace Ms
 
