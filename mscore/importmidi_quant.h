@@ -7,6 +7,7 @@ namespace Ms {
 class MidiChord;
 class TimeSigMap;
 class ReducedFraction;
+class MTrack;
 
 namespace MidiTuplet {
 struct TupletData;
@@ -30,6 +31,11 @@ ReducedFraction findRegularQuantRaster(
             const std::multimap<ReducedFraction, MidiChord>::const_iterator &startBarChordIt,
             const std::multimap<ReducedFraction, MidiChord>::const_iterator &endChordIt,
             const ReducedFraction &endBarTick);
+
+void checkForHumanPerformance(const std::multimap<int, MTrack> &tracks,
+                              const TimeSigMap *sigmap);
+
+void adjustChordsToBeats(std::multimap<int, MTrack> &tracks, ReducedFraction &lastTick);
 
 } // namespace Quantize
 } // namespace Ms
