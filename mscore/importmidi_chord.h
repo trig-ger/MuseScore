@@ -65,7 +65,7 @@ ReducedFraction minAllowedDuration();
 ReducedFraction findMinDuration(const QList<MidiChord> &midiChords,
                                 const ReducedFraction &length);
 void sortNotesByPitch(std::multimap<ReducedFraction, MidiChord> &chords);
-void collectChords(std::multimap<int, MTrack> &tracks);
+void collectChords(std::multimap<int, MTrack> &tracks, double ticksPerSec);
 void removeOverlappingNotes(std::multimap<int, MTrack> &tracks);
 void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks);
 void splitUnequalChords(std::multimap<int, MTrack> &tracks);

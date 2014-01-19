@@ -33,7 +33,8 @@ ReducedFraction findRegularQuantRaster(
             const ReducedFraction &endBarTick);
 
 void checkForHumanPerformance(const std::multimap<int, MTrack> &tracks,
-                              const TimeSigMap *sigmap);
+                              const TimeSigMap *sigmap,
+                              double ticksPerSec);
 
 void adjustChordsToBeats(std::multimap<int, MTrack> &tracks, ReducedFraction &lastTick);
 

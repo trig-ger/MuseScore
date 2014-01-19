@@ -3,6 +3,7 @@
 #include "importmidi_fraction.h"
 #include "libmscore/mscore.h"
 #include "preferences.h"
+#include "importmidi_inner.h"
 #include "importmidi_chord.h"
 #include "importmidi_meter.h"
 #include "importmidi_tuplet.h"
@@ -236,29 +237,6 @@ getTrackWithAllChords(const std::multimap<int, MTrack> &tracks)
       return singleTrack;
       }
 
-// tempo in beats per second
-
-double findBasicTempo(const std::multimap<int, MTrack> &tracks)
-      {
-      for (const auto &track: tracks) {
-            for (const auto &ie : track.second.mtrack->events()) {
-                  const MidiEvent &e = ie.second;
-                  if (e.type() == ME_META && e.metaType() == META_TEMPO) {
-                        const uchar* data = (uchar*)e.edata();
-                        const unsigned tempo = data[2] + (data[1] << 8) + (data[0] << 16);
-                        return 1000000.0 / double(tempo);
-                        }
-                  }
-            }
-
-      return 2;   // default beats per second = 120 beats per minute
-      }
-
-ReducedFraction time2Tick(double time, double ticksPerSec)
-      {
-      return ReducedFraction::fromTicks(int(ticksPerSec * time));
-      }
-
 bool isHumanPerformance(const std::multimap<ReducedFraction, MidiChord> &chords)
       {
       if (chords.empty())
@@ -311,7 +289,7 @@ prepareHumanBeatSet(const std::vector<double> &beatTimes,
       {
       std::set<ReducedFraction> beatSet;
       for (const auto &beatTime: beatTimes)
-            beatSet.insert(time2Tick(beatTime, ticksPerSec));
+            beatSet.insert(MidiTempo::time2Tick(beatTime, ticksPerSec));
                   // first beat time can be larger than first chord onTime
                   // so insert additional beats at the beginning to cover all chords
       const auto &firstOnTime = chords.begin()->first;
@@ -339,7 +317,7 @@ double findMatchRank(const std::set<ReducedFraction> &beatSet,
 {
       std::map<ReducedFraction, double> saliences;
       for (const auto &e: events) {
-            saliences.insert({time2Tick(e.time, ticksPerSec), e.salience});
+            saliences.insert({MidiTempo::time2Tick(e.time, ticksPerSec), e.salience});
             }
       std::vector<ReducedFraction> beatsOfBar;
       double matchFrac = 0;
@@ -380,16 +358,15 @@ double findMatchRank(const std::set<ReducedFraction> &beatSet,
 }
 
 void checkForHumanPerformance(const std::multimap<int, MTrack> &tracks,
-                              const TimeSigMap *sigmap)
+                              const TimeSigMap *sigmap,
+                              double ticksPerSec)
       {
       auto allChordsTrack = getTrackWithAllChords(tracks);
-      MChord::collectChords(allChordsTrack);
+      MChord::collectChords(allChordsTrack, ticksPerSec);
       const MTrack &track = allChordsTrack.begin()->second;
       const auto &allChords = track.chords;
       if (allChords.empty())
             return;
-
-      const double ticksPerSec = findBasicTempo(tracks) * MScore::division;
 
       if (isHumanPerformance(allChords)) {
             const auto barFraction = ReducedFraction(sigmap->timesig(0).timesig());
