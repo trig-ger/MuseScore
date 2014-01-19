@@ -916,10 +916,12 @@ void convertMidi(Score *score, const MidiFile *mf)
       auto tracks = createMTrackList(lastTick, sigmap, mf);
       cleanUpMidiEvents(tracks);
       const auto &opers = preferences.midiImportOperations;
-      if (opers.count() == 0)
-            Quantize::checkForHumanPerformance(tracks, sigmap);
+      const double ticksPerSec = MidiTempo::findBasicTempo(tracks) * MScore::division;
 
-      MChord::collectChords(tracks);
+      if (opers.count() == 0)
+            Quantize::checkForHumanPerformance(tracks, sigmap, ticksPerSec);
+
+      MChord::collectChords(tracks, ticksPerSec);
       Quantize::adjustChordsToBeats(tracks, lastTick);
       MChord::removeOverlappingNotes(tracks);
 

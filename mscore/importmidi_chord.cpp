@@ -113,16 +113,16 @@ bool areSingleNoteChords(const std::multimap<ReducedFraction, MidiChord> &chords
 // in the object's inlet in the "fudge" time zone
 // threshExtTime = 20 ms
 
-void collectChords(std::multimap<int, MTrack> &tracks)
+void collectChords(std::multimap<int, MTrack> &tracks, double ticksPerSec)
       {
       for (auto &track: tracks) {
             auto &chords = track.second.chords;
             if (chords.empty())
                   continue;
 
-            const ReducedFraction threshTime = minAllowedDuration() / 2;
-            const ReducedFraction fudgeTime = threshTime / 4;
-            const ReducedFraction threshExtTime = threshTime / 2;
+            const ReducedFraction threshTime = MidiTempo::time2Tick(40e-3, ticksPerSec);
+            const ReducedFraction fudgeTime = MidiTempo::time2Tick(10e-3, ticksPerSec);
+            const ReducedFraction threshExtTime = MidiTempo::time2Tick(20e-3, ticksPerSec);
 
             ReducedFraction currentChordStart(-1, 1);    // invalid
             ReducedFraction curThreshTime(-1, 1);
