@@ -458,5 +458,81 @@ void adjustChordsToBeats(std::multimap<int, MTrack> &tracks,
             }
       }
 
+void simplifyForNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
+      {
+      const auto &opers = preferences.midiImportOperations;
+      const auto duration8th = ReducedFraction::fromTicks(MScore::division / 2);
+
+      for (auto &trackItem: tracks) {
+            MTrack &track = trackItem.second;
+            if (!opers.trackOperations(track.indexOfOperation).quantize.humanPerformance)
+                  continue;
+            bool changed = false;
+                        // all chords here with the same voice should have different onTime values
+            for (auto it = track.chords.begin(); it != track.chords.end(); ++it) {
+                  const auto newLen = MChord::findOptimalNoteLen(it, track.chords, sigmap);
+
+                  auto *maxNote = &*(it->second.notes.begin());
+                  for (auto &note: it->second.notes) {
+                        if (note.len > maxNote->len)
+                              maxNote = &note;
+                        }
+
+                  if (maxNote->len < newLen) {     // only enlarge notes
+                        const auto gap = newLen - maxNote->len;
+                        if (newLen >= duration8th) {
+                              if (gap >= newLen / 2) {
+
+                                    int bar, beat, tickInBar;
+                                    sigmap->tickValues(it->first.ticks(), &bar, &beat, &tickInBar);
+                                    const auto startBarTick = ReducedFraction::fromTicks(
+                                                      sigmap->bar2tick(bar, 0));
+                                    const auto barFraction = ReducedFraction(
+                                                      sigmap->timesig(startBarTick.ticks()).timesig());
+
+                                    auto tupletsInBar = MidiTuplet::findTupletsInBarForDuration(
+                                                      it->second.voice, startBarTick, it->first,
+                                                      newLen, track.tuplets);
+                                    struct {
+                                          bool operator()(const MidiTuplet::TupletData &d1,
+                                                          const MidiTuplet::TupletData &d2)
+                                                {
+                                                return (d1.len > d2.len);
+                                                }
+                                          } comparator;
+                                                // sort by tuplet length in desc order
+                                    sort(tupletsInBar.begin(), tupletsInBar.end(), comparator);
+
+                                    const auto divInfo = Meter::divisionInfo(barFraction, tupletsInBar);
+                                    const int begLevel = Meter::levelOfTick(it->first, divInfo);
+                                    const int endLevel = Meter::levelOfTick(it->first + newLen, divInfo);
+                                    const auto splitPoint = Meter::findMaxLevelBetween(
+                                                      it->first, it->first + newLen, divInfo);
+                                    if ((splitPoint.level > begLevel || splitPoint.level > endLevel)
+                                                && Meter::isSingleDottedDuration(newLen)) {
+                                          maxNote->len = newLen;
+                                          }
+                                    }
+                              else {
+                                    maxNote->len = newLen;
+                                    if (gap >= newLen / 4 && gap < newLen / 2)
+                                          it->second.staccato = true;
+                                    }
+                              }
+                        else {
+                              maxNote->len = newLen;
+                              if (gap < newLen / 2)
+                                    it->second.staccato = true;
+                              }
+
+                        if (!changed)
+                              changed = true;
+                        }
+                  }
+            if (changed)
+                  MidiTuplet::removeEmptyTuplets(track);
+            }
+      }
+
 } // namespace Quantize
 } // namespace Ms

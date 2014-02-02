@@ -43,9 +43,21 @@ std::vector<int> metricLevelsOfBar(const ReducedFraction &barFraction,
                                    const ReducedFraction &minDuration);
 
 bool isSimpleNoteDuration(const ReducedFraction &duration);   // quarter, half, eighth, 16th ...
+bool isSingleDottedDuration(const ReducedFraction &duration);
 
             // division lengths of bar, each can be a tuplet length
 std::vector<ReducedFraction> divisionsOfBarForTuplets(const ReducedFraction &barFraction);
+
+            // metric structure of bar
+std::vector<DivisionInfo> divisionInfo(const ReducedFraction &barFraction,
+                                       const std::vector<MidiTuplet::TupletData> &tupletsInBar);
+
+int levelOfTick(const ReducedFraction &tick, const std::vector<DivisionInfo> &divsInfo);
+
+struct MaxLevel;
+MaxLevel findMaxLevelBetween(const ReducedFraction &startTickInBar,
+                             const ReducedFraction &endTickInBar,
+                             const std::vector<DivisionInfo> &divsInfo);
 
             // duration and all tuplets should belong to the same voice
 // nested tuplets are not allowed

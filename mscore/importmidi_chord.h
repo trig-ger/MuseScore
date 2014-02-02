@@ -21,6 +21,7 @@ class MidiChord {
    public:
       int voice = 0;
       bool isInTuplet = false;
+      bool staccato = false;
       QList<MidiNote> notes;
       
       bool isStaccato() const
@@ -33,6 +34,7 @@ class MidiChord {
       };
 
 class MTrack;
+class TimeSigMap;
 
 namespace MChord {
 
@@ -75,6 +77,10 @@ void collectChords(std::multimap<int, MTrack> &tracks, double ticksPerSec);
 void removeOverlappingNotes(std::multimap<int, MTrack> &tracks);
 void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks);
 void splitUnequalChords(std::multimap<int, MTrack> &tracks);
+
+ReducedFraction findOptimalNoteLen(const std::multimap<ReducedFraction, MidiChord>::iterator &chordIt,
+                                   const std::multimap<ReducedFraction, MidiChord> &chords,
+                                   const TimeSigMap *sigmap);
 
 } // namespace MChord
 } // namespace Ms

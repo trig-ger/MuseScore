@@ -215,35 +215,6 @@ void setStaffBracketForDrums(QList<MTrack> &tracks)
       setBracket(firstDrumStaff, counter);
       }
 
-ReducedFraction endOfBarForTick(const ReducedFraction &tick, const TimeSigMap *sigmap)
-      {
-      int bar, beat, tickInBar;
-      sigmap->tickValues(tick.ticks(), &bar, &beat, &tickInBar);
-      return ReducedFraction::fromTicks(sigmap->bar2tick(bar + 1, 0));
-      }
-
-ReducedFraction findOptimalNoteLen(const std::multimap<ReducedFraction, MidiChord>::iterator &chordIt,
-                                  const std::multimap<ReducedFraction, MidiChord> &chords,
-                                  const TimeSigMap *sigmap)
-      {
-      const auto &onTime = chordIt->first;
-      auto barEnd = endOfBarForTick(onTime, sigmap);
-                  // let's find new offTime = min(next chord onTime, barEnd)
-      auto offTime = barEnd;
-      auto next = std::next(chordIt);
-      while (next != chords.end()) {
-            if (next->first > barEnd)
-                  break;
-            if (next->second.voice == chordIt->second.voice) {
-                  offTime = next->first;
-                  break;
-                  }
-            ++next;
-            }
-
-      return offTime - onTime;
-      }
-
 void removeRests(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
       {
       const auto &opers = preferences.midiImportOperations;
@@ -257,7 +228,7 @@ void removeRests(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
             bool changed = false;
                         // all chords here with the same voice should have different onTime values
             for (auto it = track.chords.begin(); it != track.chords.end(); ++it) {
-                  const auto newLen = findOptimalNoteLen(it, track.chords, sigmap);
+                  const auto newLen = MChord::findOptimalNoteLen(it, track.chords, sigmap);
                   for (auto &note: it->second.notes) {
                         if (note.len != newLen) {
                               note.len = newLen;

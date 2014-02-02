@@ -302,6 +302,11 @@ bool isSimpleNoteDuration(const ReducedFraction &duration)
       return false;
       }
 
+bool isSingleDottedDuration(const ReducedFraction &duration)
+      {
+      return isSimpleNoteDuration(duration / 3);
+      }
+
 bool isQuarterDuration(const ReducedFraction &ticks)
       {
       return (ticks.numerator() == 1 && ticks.denominator() == 4);
