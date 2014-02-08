@@ -435,8 +435,8 @@ bool badLevelCondition(int startLevelDiff, int endLevelDiff, int tol)
       return startLevelDiff > tol || endLevelDiff > tol;
       }
 
-int noteCount(const ReducedFraction &duration,
-              bool useDots)
+int musicNoteCount(const ReducedFraction &duration,
+                   bool useDots)
       {
       return toDurationList(duration.fraction(), useDots, 1).size();
       }
@@ -446,8 +446,8 @@ bool isLessNoteCount(const ReducedFraction &t1,
                      const ReducedFraction &t3,
                      bool useDots)
       {
-      return noteCount(t3 - t1, useDots) <
-                  noteCount(t2 - t1, useDots) + noteCount(t3 - t2, useDots);
+      return musicNoteCount(t3 - t1, useDots) <
+                  musicNoteCount(t2 - t1, useDots) + musicNoteCount(t3 - t2, useDots);
       }
 
 void excludeNodes(std::map<ReducedFraction, Node> &nodes,

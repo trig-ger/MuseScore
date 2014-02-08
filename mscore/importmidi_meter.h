@@ -62,6 +62,9 @@ std::vector<DivisionInfo> findBarDivisionInfo(
 
 int levelOfTick(const ReducedFraction &tick, const std::vector<DivisionInfo> &divsInfo);
 
+            // count of notes of music representation of duration
+int musicNoteCount(const ReducedFraction &duration, bool useDots);
+
 struct MaxLevel;
 MaxLevel findMaxLevelBetween(const ReducedFraction &startTickInBar,
                              const ReducedFraction &endTickInBar,
