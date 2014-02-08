@@ -458,14 +458,10 @@ void adjustChordsToBeats(std::multimap<int, MTrack> &tracks,
             }
       }
 
-void setNotesLen(QList<MidiNote> &notes,
-                 const ReducedFraction &maxNoteLen,
-                 const ReducedFraction &newLen)
+void enlargeNotesLen(QList<MidiNote> &notes, const ReducedFraction &addLen)
       {
-      for (auto &note: notes) {
-            if (note.len == maxNoteLen)
-                  note.len = newLen;
-            }
+      for (auto &note: notes)
+            note.len += addLen;
       }
 
 void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
@@ -497,17 +493,17 @@ void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigm
                                                               onTime, onTime + newLen, divInfo);
                                     if ((splitPoint.level > begLevel || splitPoint.level > endLevel)
                                                 && Meter::isSingleDottedDuration(newLen)) {
-                                          setNotesLen(chord.notes, maxNoteLen, newLen);
+                                          enlargeNotesLen(chord.notes, gap);
                                           }
                                     }
                               else {
-                                    setNotesLen(chord.notes, maxNoteLen, newLen);
+                                    enlargeNotesLen(chord.notes, gap);
                                     if (gap >= newLen / 4 && gap < newLen / 2)
                                           chord.staccato = true;
                                     }
                               }
                         else {
-                              setNotesLen(chord.notes, maxNoteLen, newLen);
+                              enlargeNotesLen(chord.notes, gap);
                               if (gap < newLen / 2)
                                     chord.staccato = true;
                               }
