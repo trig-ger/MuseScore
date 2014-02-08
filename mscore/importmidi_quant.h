@@ -38,7 +38,9 @@ void checkForHumanPerformance(const std::multimap<int, MTrack> &tracks,
 
 void adjustChordsToBeats(std::multimap<int, MTrack> &tracks, ReducedFraction &lastTick);
 
-void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap);
+void simplifyNotation(std::multimap<int, MTrack> &tracks,
+                      const TimeSigMap *sigmap,
+                      double ticksPerSec);
 
 } // namespace Quantize
 } // namespace Ms

@@ -935,7 +935,7 @@ void convertMidi(Score *score, const MidiFile *mf)
                  "convertMidi:", "There are notes of length < min allowed duration");
 
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
-      Quantize::simplifyNotation(tracks, sigmap);
+      Quantize::simplifyNotation(tracks, sigmap, ticksPerSec);
       LRHand::splitIntoLeftRightHands(tracks);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);

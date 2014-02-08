@@ -11,6 +11,7 @@
 
 #include <set>
 #include <functional>
+#include <limits>
 
 
 namespace Ms {
@@ -458,13 +459,68 @@ void adjustChordsToBeats(std::multimap<int, MTrack> &tracks,
             }
       }
 
+// apply quickthresh algorithm (see MChord::collectChords)
+// for off time values of chord notes - eqialize them
+// set equal off time values to the simplest value of old off times
+// i.e. with min music symbol count to represent
+
+void equalizeNoteLengths(QList<MidiNote> &notes, double ticksPerSec)
+      {
+      const bool useDots = preferences.midiImportOperations.currentTrackOperations().useDots;
+
+      const ReducedFraction threshTime = MidiTempo::time2Tick(40e-3, ticksPerSec);
+      const ReducedFraction fudgeTime = MidiTempo::time2Tick(10e-3, ticksPerSec);
+      const ReducedFraction threshExtTime = MidiTempo::time2Tick(20e-3, ticksPerSec);
+
+      ReducedFraction currentNoteLen(-1, 1);    // invalid
+      ReducedFraction curThreshTime(-1, 1);
+
+      int groupStart = -1;          // group of notes with equal lengths
+      for (int i = 0; i != notes.size(); ++i) {
+                        // short events with len < minAllowedDuration must be cleaned up
+            Q_ASSERT_X(notes[i].len >= MChord::minAllowedDuration(),
+                       "MChord: equalizeChordOffTimes", "Note length is less than min allowed duration");
+
+            if (notes[i].len <= currentNoteLen + curThreshTime) {
+                              // this branch should not be executed with the first note
+                  if (notes[i].len >= currentNoteLen + curThreshTime - fudgeTime
+                              && curThreshTime == threshTime) {
+                        curThreshTime += threshExtTime;
+                        }
+                  notes[i].len = currentNoteLen;
+                  }
+            else {
+                  if (groupStart >= 0) {        // set notes with equal lengths to the length
+                                                // with the most simple music representation
+                        int minSymbolCount = std::numeric_limits<int>::max();
+                        ReducedFraction optimalLen(-1, 0);
+
+                        for (int j = groupStart; j < i; ++j) {
+                              int symbolCount = Meter::musicNoteCount(notes[j].len, useDots);
+                              if (symbolCount < minSymbolCount) {
+                                    minSymbolCount = symbolCount;
+                                    optimalLen = notes[j].len;
+                                    }
+                              }
+                        for (int j = groupStart; j < i; ++j)
+                              notes[j].len = optimalLen;
+                        }
+                  groupStart = i;
+                  currentNoteLen = notes[i].len;
+                  curThreshTime = threshTime;
+                  }
+            }
+      }
+
 void enlargeNotesLen(QList<MidiNote> &notes, const ReducedFraction &addLen)
       {
       for (auto &note: notes)
             note.len += addLen;
       }
 
-void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
+void simplifyNotation(std::multimap<int, MTrack> &tracks,
+                      const TimeSigMap *sigmap,
+                      double ticksPerSec)
       {
       const auto &opers = preferences.midiImportOperations;
       const auto duration8th = ReducedFraction::fromTicks(MScore::division / 2);
@@ -511,6 +567,7 @@ void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigm
                         if (!changed)
                               changed = true;
                         }
+                  equalizeNoteLengths(chord.notes, ticksPerSec);
                   }
             if (changed)
                   MidiTuplet::removeEmptyTuplets(track);
