@@ -375,7 +375,7 @@ void MTrack::processPendingNotes(QList<MidiChord> &midiChords,
                                  const ReducedFraction &nextChordTick)
       {
       Score* score     = staff->score();
-      const int track        = staff->idx() * VOICES + voice;
+      const int track  = staff->idx() * VOICES + voice;
       Drumset* drumset = staff->part()->instr()->drumset();
       const bool useDrumset  = staff->part()->instr()->useDrumset();
 
@@ -408,7 +408,6 @@ void MTrack::processPendingNotes(QList<MidiChord> &midiChords,
                   a->setArticulationType(Articulation_Staccato);
                   chord->add(a);
                   }
-
             Segment* s = measure->getSegment(chord, tick.ticks());
             s->add(chord);
             chord->setUserPlayEvents(true);
