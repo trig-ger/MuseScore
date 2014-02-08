@@ -8,6 +8,7 @@ namespace Ms {
 
 class ReducedFraction;
 class TDuration;
+class TimeSigMap;
 
 namespace MidiTuplet {
 struct TupletData;
@@ -49,8 +50,15 @@ bool isSingleDottedDuration(const ReducedFraction &duration);
 std::vector<ReducedFraction> divisionsOfBarForTuplets(const ReducedFraction &barFraction);
 
             // metric structure of bar
-std::vector<DivisionInfo> divisionInfo(const ReducedFraction &barFraction,
-                                       const std::vector<MidiTuplet::TupletData> &tupletsInBar);
+std::vector<DivisionInfo> findBarDivisionInfo(
+            const ReducedFraction &barFraction,
+            const std::vector<MidiTuplet::TupletData> &tupletsInBar);
+
+std::vector<DivisionInfo> findBarDivisionInfo(
+            const ReducedFraction &someTimeInBar,
+            const TimeSigMap *sigmap,
+            int voice,
+            const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tuplets);
 
 int levelOfTick(const ReducedFraction &tick, const std::vector<DivisionInfo> &divsInfo);
 

@@ -458,7 +458,17 @@ void adjustChordsToBeats(std::multimap<int, MTrack> &tracks,
             }
       }
 
-void simplifyForNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
+void setNotesLen(QList<MidiNote> &notes,
+                 const ReducedFraction &maxNoteLen,
+                 const ReducedFraction &newLen)
+      {
+      for (auto &note: notes) {
+            if (note.len == maxNoteLen)
+                  note.len = newLen;
+            }
+      }
+
+void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
       {
       const auto &opers = preferences.midiImportOperations;
       const auto duration8th = ReducedFraction::fromTicks(MScore::division / 2);
@@ -471,58 +481,35 @@ void simplifyForNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *s
                         // all chords here with the same voice should have different onTime values
             for (auto it = track.chords.begin(); it != track.chords.end(); ++it) {
                   const auto newLen = MChord::findOptimalNoteLen(it, track.chords, sigmap);
+                  MidiChord &chord = it->second;
+                  const auto &onTime = it->first;
+                  const auto maxNoteLen = MChord::maxNoteLen(chord.notes);
 
-                  auto *maxNote = &*(it->second.notes.begin());
-                  for (auto &note: it->second.notes) {
-                        if (note.len > maxNote->len)
-                              maxNote = &note;
-                        }
-
-                  if (maxNote->len < newLen) {     // only enlarge notes
-                        const auto gap = newLen - maxNote->len;
+                  if (maxNoteLen < newLen) {     // only enlarge notes
+                        const auto gap = newLen - maxNoteLen;
                         if (newLen >= duration8th) {
                               if (gap >= newLen / 2) {
-
-                                    int bar, beat, tickInBar;
-                                    sigmap->tickValues(it->first.ticks(), &bar, &beat, &tickInBar);
-                                    const auto startBarTick = ReducedFraction::fromTicks(
-                                                      sigmap->bar2tick(bar, 0));
-                                    const auto barFraction = ReducedFraction(
-                                                      sigmap->timesig(startBarTick.ticks()).timesig());
-
-                                    auto tupletsInBar = MidiTuplet::findTupletsInBarForDuration(
-                                                      it->second.voice, startBarTick, it->first,
-                                                      newLen, track.tuplets);
-                                    struct {
-                                          bool operator()(const MidiTuplet::TupletData &d1,
-                                                          const MidiTuplet::TupletData &d2)
-                                                {
-                                                return (d1.len > d2.len);
-                                                }
-                                          } comparator;
-                                                // sort by tuplet length in desc order
-                                    sort(tupletsInBar.begin(), tupletsInBar.end(), comparator);
-
-                                    const auto divInfo = Meter::divisionInfo(barFraction, tupletsInBar);
-                                    const int begLevel = Meter::levelOfTick(it->first, divInfo);
-                                    const int endLevel = Meter::levelOfTick(it->first + newLen, divInfo);
+                                    const auto divInfo = Meter::findBarDivisionInfo(
+                                                      onTime, sigmap, chord.voice, track.tuplets);
+                                    const int begLevel = Meter::levelOfTick(onTime, divInfo);
+                                    const int endLevel = Meter::levelOfTick(onTime + newLen, divInfo);
                                     const auto splitPoint = Meter::findMaxLevelBetween(
-                                                      it->first, it->first + newLen, divInfo);
+                                                              onTime, onTime + newLen, divInfo);
                                     if ((splitPoint.level > begLevel || splitPoint.level > endLevel)
                                                 && Meter::isSingleDottedDuration(newLen)) {
-                                          maxNote->len = newLen;
+                                          setNotesLen(chord.notes, maxNoteLen, newLen);
                                           }
                                     }
                               else {
-                                    maxNote->len = newLen;
+                                    setNotesLen(chord.notes, maxNoteLen, newLen);
                                     if (gap >= newLen / 4 && gap < newLen / 2)
-                                          it->second.staccato = true;
+                                          chord.staccato = true;
                                     }
                               }
                         else {
-                              maxNote->len = newLen;
+                              setNotesLen(chord.notes, maxNoteLen, newLen);
                               if (gap < newLen / 2)
-                                    it->second.staccato = true;
+                                    chord.staccato = true;
                               }
 
                         if (!changed)

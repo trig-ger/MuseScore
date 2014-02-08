@@ -1,9 +1,12 @@
 #include "importmidi_meter.h"
+#include "importmidi_tuplet.h"
+#include "importmidi_inner.h"
 #include "importmidi_fraction.h"
 #include "libmscore/durationtype.h"
 #include "libmscore/mscore.h"
-#include "importmidi_tuplet.h"
-#include "importmidi_inner.h"
+#include "libmscore/sig.h"
+
+#include <algorithm>
 
 
 namespace Ms {
@@ -148,8 +151,9 @@ std::vector<ReducedFraction> divisionsOfBarForTuplets(const ReducedFraction &bar
 
 // result in vector: first elements - all tuplets info, one at the end - bar division info
 
-std::vector<DivisionInfo> divisionInfo(const ReducedFraction &barFraction,
-                                       const std::vector<MidiTuplet::TupletData> &tupletsInBar)
+std::vector<DivisionInfo> findBarDivisionInfo(
+            const ReducedFraction &barFraction,
+            const std::vector<MidiTuplet::TupletData> &tupletsInBar)
       {
       std::vector<DivisionInfo> divsInfo;
 
@@ -167,6 +171,31 @@ std::vector<DivisionInfo> divisionInfo(const ReducedFraction &barFraction,
       divsInfo.push_back(barDivisionInfo);
 
       return divsInfo;
+      }
+
+std::vector<DivisionInfo> findBarDivisionInfo(
+            const ReducedFraction &someTimeInBar,
+            const TimeSigMap *sigmap,
+            int voice,
+            const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tuplets)
+      {
+      int bar, beat, tickInBar;
+      sigmap->tickValues(someTimeInBar.ticks(), &bar, &beat, &tickInBar);
+      const auto startBarTick = ReducedFraction::fromTicks(sigmap->bar2tick(bar, 0));
+      const auto barFraction = ReducedFraction(sigmap->timesig(startBarTick.ticks()).timesig());
+      auto tupletsInBar = MidiTuplet::findTupletsInBarForDuration(
+                            voice, startBarTick, startBarTick, barFraction, tuplets);
+      struct {
+            bool operator()(const MidiTuplet::TupletData &d1,
+                            const MidiTuplet::TupletData &d2)
+                  {
+                  return (d1.len > d2.len);
+                  }
+            } comparator;
+                  // sort by tuplet length in desc order
+      std::sort(tupletsInBar.begin(), tupletsInBar.end(), comparator);
+
+      return findBarDivisionInfo(barFraction, tupletsInBar);
       }
 
 // tick is counted from the beginning of bar
@@ -489,7 +518,7 @@ toDurationList(const ReducedFraction &startTickInBar,
                   || endTickInBar <= startTickInBar || endTickInBar > barFraction)
             return QList<std::pair<ReducedFraction, TDuration>>();
 
-      const auto divInfo = divisionInfo(barFraction, tupletsInBar);  // mectric structure of bar
+      const auto divInfo = findBarDivisionInfo(barFraction, tupletsInBar);  // mectric structure of bar
       const auto minDuration = minAllowedDuration() * 2;  // >= minAllowedDuration() after subdivision
 
       std::map<ReducedFraction, Node> nodes;    // <onTime, Node>
