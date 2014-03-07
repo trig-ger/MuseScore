@@ -387,45 +387,56 @@ validateAndFindExcludedChords(std::list<int> &indexes,
             }
 
       return excludedChords;
-}
+      }
 
 class TupletErrorResult
       {
    public:
-      TupletErrorResult(double t = 0.0, const ReducedFraction &r = ReducedFraction(0, 1))
-            : tupletAverageError(t)
-            , sumLengthOfRests(r)
+      TupletErrorResult(double tupletAverageError = 0.0,
+                        const ReducedFraction &restsLen = ReducedFraction(0, 1),
+                        size_t tupletIndex = 0)
+            : tupletAverageError_(tupletAverageError)
+            , sumLengthOfRests_(restsLen)
+            , tupletIndex_(tupletIndex)
             {}
+
+      bool operator==(const TupletErrorResult &er) const
+            {
+            return tupletAverageError_ == er.tupletAverageError_
+                        && sumLengthOfRests_ == er.sumLengthOfRests_;
+            }
 
       bool operator<(const TupletErrorResult &er) const
             {
-            if (tupletAverageError < er.tupletAverageError) {
-                  if (sumLengthOfRests <= er.sumLengthOfRests) {
+            if (tupletAverageError_ < er.tupletAverageError_) {
+                  if (sumLengthOfRests_ <= er.sumLengthOfRests_) {
                         return true;
                         }
                   else {
-                        const double errorDiv = (er.tupletAverageError - tupletAverageError)
-                                                / er.tupletAverageError;
-                        const auto restsDiv = (sumLengthOfRests - er.sumLengthOfRests)
-                                                / sumLengthOfRests;
+                        const double errorDiv = (er.tupletAverageError_ - tupletAverageError_)
+                                                / er.tupletAverageError_;
+                        const auto restsDiv = (sumLengthOfRests_ - er.sumLengthOfRests_)
+                                                / sumLengthOfRests_;
                         return compareDivs(errorDiv, restsDiv, er);
                         }
                   }
-            else if (tupletAverageError > er.tupletAverageError) {
-                  if (sumLengthOfRests >= er.sumLengthOfRests) {
+            else if (tupletAverageError_ > er.tupletAverageError_) {
+                  if (sumLengthOfRests_ >= er.sumLengthOfRests_) {
                         return false;
                         }
                   else {
-                        const double errorDiv = (tupletAverageError - er.tupletAverageError)
-                                                / tupletAverageError;
-                        const auto restsDiv = (er.sumLengthOfRests - sumLengthOfRests)
-                                                / er.sumLengthOfRests;
+                        const double errorDiv = (tupletAverageError_ - er.tupletAverageError_)
+                                                / tupletAverageError_;
+                        const auto restsDiv = (er.sumLengthOfRests_ - sumLengthOfRests_)
+                                                / er.sumLengthOfRests_;
                         return compareDivs(errorDiv, restsDiv, er);
                         }
                   }
             else
-                  return sumLengthOfRests < er.sumLengthOfRests;
+                  return sumLengthOfRests_ < er.sumLengthOfRests_;
             }
+
+      size_t index() const { return tupletIndex_; }
 
    private:
       bool compareDivs(double errorDiv,
@@ -434,13 +445,14 @@ class TupletErrorResult
             {
                         // error is more important than length of rests
             if (errorDiv < restsDiv.numerator() * 0.8 / restsDiv.denominator())
-                  return sumLengthOfRests < er.sumLengthOfRests;
+                  return sumLengthOfRests_ < er.sumLengthOfRests_;
             else
-                  return tupletAverageError < er.tupletAverageError;
+                  return tupletAverageError_ < er.tupletAverageError_;
             }
 
-      double tupletAverageError;
-      ReducedFraction sumLengthOfRests;
+      double tupletAverageError_;
+      ReducedFraction sumLengthOfRests_;
+      size_t tupletIndex_;
       };
 
 TupletErrorResult
@@ -533,7 +545,7 @@ minimizeQuantError(std::vector<std::vector<int>> &indexGroups,
       {
       TupletErrorResult minResult;
       std::vector<int> iIndexGroups;  // indexes of elements in indexGroups
-      for (int i = 0; i != (int)indexGroups.size(); ++i)
+      for (int i = 0; i != (int)indexGroups.size() - 1; ++i)
             iIndexGroups.push_back(i);
       std::list<int> bestIndexes;
                   // number of permutations grows as n!
@@ -550,6 +562,10 @@ minimizeQuantError(std::vector<std::vector<int>> &indexGroups,
                   for (const auto &ii: group)
                         indexesToValidate.push_back(ii);
                   }
+
+            for (const auto &i: indexGroups.back())
+                  indexesToValidate.push_back(i);
+
                         // note: redundant indexes of indexesToValidate are erased here!
             const auto result = validateTuplets(indexesToValidate, tuplets);
             if (counter == 0) {
@@ -687,6 +703,64 @@ void removeUselessTuplets(std::vector<TupletInfo> &tuplets)
             }
       }
 
+std::vector<size_t> findLongestUncommonGroup(const std::vector<TupletInfo> &tuplets)
+      {
+      struct TInfo
+            {
+            bool operator<(const TInfo &other) const
+                  {
+                  if (offTime < other.offTime)
+                        return true;
+                  else if (offTime > other.offTime)
+                        return false;
+                  else
+                        return onTime >= other.onTime;
+                  }
+            bool operator==(const TInfo &other) const
+                  {
+                  return offTime == other.offTime;
+                  }
+
+            ReducedFraction onTime;
+            ReducedFraction offTime;
+            size_t index;
+            };
+
+      std::vector<TInfo> info;
+      for (size_t i = 0; i != tuplets.size(); ++i) {
+            const auto &tuplet = tuplets[i];
+            info.push_back({tuplet.onTime, tuplet.onTime + tuplet.len, i});
+            }
+
+      std::sort(info.begin(), info.end());
+      info.erase(std::unique(info.begin(), info.end()), info.end());
+
+      std::vector<size_t> indexes;
+      size_t lastSelected = 0;
+      for (size_t i = 0; i != info.size(); ++i) {
+            if (i > 0 && info[i].onTime < info[lastSelected].offTime)
+                  continue;
+            lastSelected = i;
+            indexes.push_back(info[i].index);
+            }
+                  // check: maybe tuplets intersect each other but still don't have common chords
+      if (indexes.size() == 1) {
+            for (size_t i = 0; i != tuplets.size() - 1; ++i) {
+                  for (size_t j = i + 1; j != tuplets.size(); ++j) {
+                        if (!haveCommonChords(i, j, tuplets)) {
+                              indexes.resize(2);
+                              indexes[0] = i;
+                              indexes[1] = j;
+                              return indexes;
+                              }
+                        }
+                  }
+            }
+
+      return indexes;
+      }
+
+
 // first chord in tuplet may belong to other tuplet at the same time
 // in the case if there are enough notes in this first chord
 // to be splitted into different voices
@@ -696,6 +770,40 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
       if (tuplets.empty())
             return;
       removeUselessTuplets(tuplets);
+
+      std::vector<TupletErrorResult> errors;
+      for (size_t i = 0; i != tuplets.size(); ++i) {
+            const TupletInfo &tuplet = tuplets[i];
+            double tupletError = tuplet.tupletSumError.ticks() * 1.0 / tuplet.chords.size();
+            errors.push_back(TupletErrorResult{tupletError, tuplet.sumLengthOfRests, i});
+            }
+
+      std::sort(errors.begin(), errors.end());  // sort in error ascending order
+
+      size_t end = 1;
+      while (end < errors.size() && errors[end] == errors[0])
+            ++end;
+
+      std::vector<std::vector<int>> tupletGroupsToTest;
+      for (size_t i = 0; i != end; ++i)
+            tupletGroupsToTest.push_back(std::vector<int>(1, errors[i].index()));
+
+      std::vector<int> bigGroup;
+      for (size_t i = end; i != errors.size(); ++i)
+            bigGroup.push_back(errors[i].index());
+      tupletGroupsToTest.push_back(bigGroup);
+
+      std::list<int> bestIndexes = minimizeQuantError(tupletGroupsToTest, tuplets);
+
+
+
+/*
+      std::list<int> indexes;
+      for (const auto &e: errors)
+            indexes.push_back(e.index());
+
+      validateAndFindExcludedChords(indexes, tuplets);    // only valid indexes are left
+
 
       std::list<int> bestTuplets;
       std::list<int> restTuplets;
@@ -714,9 +822,10 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
             std::list<int> bestIndexes = minimizeQuantError(tupletGroupsToTest, tuplets);
             bestTuplets.insert(bestTuplets.end(), bestIndexes.begin(), bestIndexes.end());
             }
+*/
 
       std::vector<TupletInfo> newTuplets;
-      for (const auto &i: bestTuplets)
+      for (const auto &i: bestIndexes)
             newTuplets.push_back(tuplets[i]);
       std::swap(tuplets, newTuplets);
       }
