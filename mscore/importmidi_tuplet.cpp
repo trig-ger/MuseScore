@@ -1224,6 +1224,50 @@ void addChordsBetweenTupletNotes(
             }
       }
 
+void mergeTupletsWhenPossible(
+            std::vector<TupletInfo> &tuplets)
+      {
+      for (size_t i = 0; i != tuplets.size() - 1; ++i) {
+            const auto &offTime1 = tuplets[i].onTime + tuplets[i].len;
+            for (size_t j = i + 1; j != tuplets.size(); ++j) {
+                  const auto &offTime2 = tuplets[j].onTime + tuplets[j].len;
+                  if (tuplets[i].tupletNumber == tuplets[j].tupletNumber
+                              && tuplets[i].onTime < offTime2 && tuplets[j].onTime < offTime1) {
+
+                        }
+
+                  }
+            }
+
+
+      for (TupletInfo &tuplet: tuplets) {
+            if (tuplet.chords.empty())
+                  continue;
+            for (auto it = nonTuplets.begin(); it != nonTuplets.end(); ) {
+                  const auto &chordIt = *it;
+                  const auto &onTime = chordIt->first;
+                  if (onTime > tuplet.onTime
+                              && hasIntersectionWithChord(tuplet.onTime, tuplet.onTime + tuplet.len,
+                                                          tuplet.regularQuant, chordIt)) {
+                        auto regularError = findQuantizationError(onTime, tuplet.regularQuant);
+                        auto tupletError = findQuantizationError(onTime, tuplet.tupletQuant);
+                        const auto offTime = MChord::maxNoteLen(chordIt->second.notes);
+
+                        if (offTime < tuplet.onTime + tuplet.len) {
+                              regularError += findQuantizationError(offTime, tuplet.regularQuant);
+                              tupletError += findQuantizationError(offTime, tuplet.tupletQuant);
+                              }
+                        if (tupletError < regularError) {
+                              tuplet.chords.insert({onTime, chordIt});
+                              it = nonTuplets.erase(it);
+                              continue;
+                              }
+                        }
+                  ++it;
+                  }
+            }
+      }
+
 std::pair<ReducedFraction, ReducedFraction>
 tupletInterval(const TupletInfo &tuplet,
                const ReducedFraction &regularRaster)
