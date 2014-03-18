@@ -550,35 +550,35 @@ void TupletCommonIndexes::add(const std::vector<int> &commonIndexes)
 
       Q_ASSERT_X(!commonIndexes.empty(), "TupletCommonIndexes::add", "Added indexes are empty");
 
-      indexes.push_back(commonIndexes);
-      maxCount *= commonIndexes.size();
-      current.resize(indexes.size());
-      if (counter) {
-            for (auto &index: current)
+      indexes_.push_back(commonIndexes);
+      maxCount_ *= commonIndexes.size();
+      current_.resize(indexes_.size());
+      if (counter_) {
+            for (auto &index: current_)
                   index = 0;
-            counter = 0;
+            counter_ = 0;
             }
       }
 
 std::pair<std::vector<int>, bool> TupletCommonIndexes::generateNext()
       {
-      std::vector<int> newIndexes(current.size());
-      for (int i = 0; i != (int)current.size(); ++i)
-            newIndexes[i] = indexes[i][current[i]];
-      const bool isLastCombination = (counter == maxCount - 1);
+      std::vector<int> newIndexes(current_.size());
+      for (int i = 0; i != (int)current_.size(); ++i)
+            newIndexes[i] = indexes_[i][current_[i]];
+      const bool isLastCombination = (counter_ == maxCount_ - 1);
 
-      ++counter;
-      if (counter == maxCount)
-            counter = 0;
+      ++counter_;
+      if (counter_ == maxCount_)
+            counter_ = 0;
 
-      for (int i = 0; i != (int)current.size(); ++i) {
-            ++current[i];
-            if (current[i] < (int)indexes[i].size())
+      for (int i = 0; i != (int)current_.size(); ++i) {
+            ++current_[i];
+            if (current_[i] < (int)indexes_[i].size())
                   break;
-            current[i] = 0;
-            if (i == (int)current.size() - 1) {
+            current_[i] = 0;
+            if (i == (int)current_.size() - 1) {
                   for (int j = 0; j != i; ++j)
-                        current[j] = 0;
+                        current_[j] = 0;
                   }
             }
 
@@ -854,6 +854,271 @@ std::vector<int> findUncommonGroup(const std::vector<TupletInfo> &tuplets)
       return uncommonGroup;
       }
 
+
+struct TupletSum
+      {
+      TupletSum& operator+=(const TupletSum &sum)
+            {
+            tupletError += sum.tupletError;
+            regularError += sum.regularError;
+            lengthOfRests += sum.lengthOfRests;
+            chordCount += sum.chordCount;
+            chordPlaces += sum.chordPlaces;
+            tupletCount += sum.tupletCount;
+
+            return *this;
+            }
+
+      TupletSum operator+(const TupletSum &sum)
+            {
+            return TupletSum(*this) += sum;
+            }
+
+      ReducedFraction tupletError = {0, 1};
+      ReducedFraction regularError = {0, 1};
+      ReducedFraction lengthOfRests = {0, 1};
+      size_t chordCount = 0;
+      size_t chordPlaces = 0;
+      size_t tupletCount = 0;
+      };
+
+struct PenaltyParams
+      {
+      TupletSum sum;
+                  // <chord address, used voices>
+      std::map<std::pair<const ReducedFraction, MidiChord> *, int> usedChords;
+                  // <chord address>
+      std::set<std::pair<const ReducedFraction, MidiChord> *> unusedChords;
+                  // <voice, intervals>
+      std::map<int, std::vector<std::pair<ReducedFraction, ReducedFraction>>> voiceIntervals;
+      bool isValid = true;
+      };
+
+TupletSum tupletSumPenalty(const TupletInfo &tuplet)
+      {
+      TupletSum sum;
+      sum.tupletError = tuplet.tupletSumError;
+      sum.regularError = tuplet.regularSumError;
+      sum.lengthOfRests = tuplet.sumLengthOfRests;
+      sum.chordCount = (int)tuplet.chords.size();
+      sum.chordPlaces = tuplet.tupletNumber;
+      sum.tupletCount = 1;
+
+      return sum;
+      }
+
+bool areTupletChordsInUse(
+            const TupletInfo &tuplet,
+            const std::map<std::pair<const ReducedFraction, MidiChord> *, int> &usedChords)
+      {
+      auto it = tuplet.chords.begin();
+      if (tuplet.firstChordIndex == 0) {
+            auto fit = usedChords.find(&*it->second);
+            if (fit != usedChords.end()) {
+                  const MidiChord &chord = it->second->second;
+                              // check are first tuplet notes all in use (1 note - 1 voice)
+                  if (!isMoreTupletVoicesAllowed(fit->second, chord.notes.size()))
+                        return true;
+                  }
+            ++it;
+            }
+      for ( ; it != tuplet.chords.end(); ++it) {
+            if (usedChords.find(&*it->second) != usedChords.end())
+                  return true;
+            }
+      return false;
+      }
+
+void markChordsAsUsed(
+            const TupletInfo &tuplet,
+            std::map<std::pair<const ReducedFraction, MidiChord> *, int> &usedChords)
+      {
+      auto it = tuplet.chords.begin();
+      if (tuplet.firstChordIndex == 0) {
+            auto fit = usedChords.find(&*it->second);
+            if (fit != usedChords.end())
+                  ++(fit->second);
+            else
+                  usedChords.insert({&*it->second, 1});
+            ++it;
+            }
+      for ( ; it != tuplet.chords.end(); ++it)
+            usedChords.insert({&*it->second, VOICES});  // lock other chords
+      }
+
+int makeApproxOptimStep(
+            std::vector<std::vector<PenaltyParams>> &penalties,
+            std::vector<std::vector<int>> &optimalPaths,
+            int pos,
+            const std::vector<TupletInfo> &tuplets,
+            const std::vector<std::pair<ReducedFraction, ReducedFraction>> &tupletIntevals)
+      {
+      int minFinalIndex = -1;
+
+      if (pos > 0) {
+            bool isFinished = true;
+            for (size_t i = 0; i != penalties.size(); ++i) {
+                  if (penalties[i][pos - 1].isValid) {
+                        isFinished = false;
+                        break;
+                        }
+                  }
+            if (isFinished)
+                  return minFinalIndex;
+            }
+
+      std::set<std::pair<const ReducedFraction, MidiChord> *> startUnusedChords;
+      for (const auto &tuplet: tuplets)
+            for (const auto &chord: tuplet.chords)
+                  startUnusedChords.insert(&*chord.second);
+
+      const int voiceLimit = tupletVoiceLimit();
+      TupletErrorResult minFinalError;
+
+      for (int i = 0; i != (int)penalties.size(); ++i) {
+            optimalPaths[i].resize(optimalPaths[i].size() + 1);
+            penalties[i][pos].sum = tupletSumPenalty(tuplets[i]);
+
+            if (pos == 0) {
+                  penalties[i][pos].unusedChords = startUnusedChords;
+                  markChordsAsUsed(tuplets[i], penalties[i][pos].usedChords);
+                  for (const auto &chord: tuplets[i].chords)
+                        penalties[i][pos].unusedChords.erase(&*chord.second);
+                  penalties[i][pos].voiceIntervals[0].push_back(tupletIntevals[i]);
+
+                  if (tuplets.size() == 1) {
+                        ReducedFraction excludedChordsError = {0, 1};
+                        for (const auto &chord: penalties[i][pos].unusedChords) {
+                              excludedChordsError += findQuantizationError(
+                                                      chord->first, tuplets[i].regularQuant);
+                              }
+                        const auto wholeTupletSum = penalties[i][pos].sum;
+                        const auto sumTupletQuantError = penalties[i][pos].sum.tupletError + excludedChordsError;
+                        const double sumTupletErrorPerChord = sumTupletQuantError.numerator() * 1.0
+                                                / (sumTupletQuantError.denominator() * wholeTupletSum.chordCount);
+
+                        TupletErrorResult error {
+                              sumTupletErrorPerChord,
+                              wholeTupletSum.chordCount * 1.0 / wholeTupletSum.chordPlaces,
+                              wholeTupletSum.lengthOfRests,
+                              penalties[i][pos].voiceIntervals.size(),
+                              wholeTupletSum.tupletCount
+                              };
+
+                        if (minFinalIndex == -1 || error < minFinalError) {
+                              minFinalError = error;
+                              minFinalIndex = i;
+                              }
+                        }
+                  }
+            else {
+                  TupletErrorResult minError;
+                  int minIndex = -1;
+                  std::set<std::pair<const ReducedFraction, MidiChord> *> minUnusedChords;
+                  std::map<std::pair<const ReducedFraction, MidiChord> *, int> minUsedChords;
+
+                  for (int j = 0; j != (int)penalties.size(); ++j) {
+                        if (j == i || !penalties[j][pos - 1].isValid)
+                              continue;
+
+                        auto voiceIntervals = penalties[j][pos - 1].voiceIntervals;
+                        auto unusedChords = penalties[j][pos - 1].unusedChords;
+                        auto usedChords = penalties[j][pos - 1].usedChords;
+                        ReducedFraction excludedChordsError = {0, 1};
+
+                              // let's find suitable voice
+                        int voice = 0;
+                        for ( ; voice < voiceLimit; ++voice) {
+                              if (!haveIntersection(tupletIntevals[i], voiceIntervals[voice]))
+                                    break;
+                              }
+                        if (voice == voiceLimit
+                                    || (voice > 0 && (int)tuplets[i].chords.size()
+                                        < tupletLimits(tuplets[i].tupletNumber).minNoteCountAddVoice)
+                                    || areTupletChordsInUse(tuplets[i], usedChords))
+                              {
+                              continue;   // tuplet cannot be used
+                              }
+                                    // we can use this tuplet
+                        markChordsAsUsed(tuplets[i], usedChords);
+
+                        for (const auto &chord: tuplets[i].chords)
+                              unusedChords.erase(&*chord.second);
+
+                                    // add quant error of all chords excluded from tuplets
+                        for (const auto &chord: unusedChords) {
+                              excludedChordsError += findQuantizationError(
+                                                      chord->first, tuplets[i].regularQuant);
+                              }
+                        voiceIntervals[voice].push_back(tupletIntevals[i]);
+
+                        const auto wholeTupletSum = penalties[i][pos].sum + penalties[j][pos - 1].sum;
+                        const auto sumTupletQuantError = penalties[i][pos].sum.tupletError + excludedChordsError;
+                        const double sumTupletErrorPerChord = sumTupletQuantError.numerator() * 1.0
+                                                / (sumTupletQuantError.denominator() * wholeTupletSum.chordCount);
+                                    // find integral error
+                        TupletErrorResult error {
+                              sumTupletErrorPerChord,
+                              wholeTupletSum.chordCount * 1.0 / wholeTupletSum.chordPlaces,
+                              wholeTupletSum.lengthOfRests,
+                              voiceIntervals.size(),
+                              wholeTupletSum.tupletCount
+                              };
+
+                        if (minIndex == -1 || error < minError) {
+                              minError = error;
+                              minIndex = j;
+                              minUnusedChords = unusedChords;
+                              minUsedChords = usedChords;
+                              }
+                        }
+                  if (minIndex == -1) {
+                        penalties[i][pos].isValid = false;
+                        }
+                  else {
+                        penalties[i][pos].sum += penalties[minIndex][pos - 1].sum;
+                        penalties[i][pos].unusedChords = minUnusedChords;
+                        penalties[i][pos].usedChords = minUsedChords;
+                        optimalPaths[i][pos] = minIndex;
+
+                        if (minFinalIndex == -1 || minError < minFinalError) {
+                              minFinalError = minError;
+                              minFinalIndex = i;
+                              }
+                        }
+                  }
+            }
+
+      return minFinalIndex;
+      }
+
+std::vector<int> collectOptimalTuplets(
+            const std::vector<std::vector<int>> &optimalPaths,
+            int finalIndex)
+      {
+      std::vector<int> bestIndexes;
+
+      const size_t count = optimalPaths[0].size();
+      int index = finalIndex;
+
+      for (size_t i = count - 1; ; --i) {
+            bestIndexes.push_back(index);
+            if (i == 0)
+                  break;
+            index = optimalPaths[index][i];
+            }
+      return bestIndexes;
+      }
+
+double fact(int N)
+      {
+      if (N < 0)
+            return 0;
+      if (N == 0)
+            return 1;
+      return N * fact(N - 1);
+      }
+
 // first chord in tuplet may belong to other tuplet at the same time
 // in the case if there are enough notes in this first chord
 // to be splitted into different voices
@@ -864,6 +1129,7 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
             return;
 
       removeUselessTuplets(tuplets);
+
       auto uncommonGroup = findUncommonGroup(tuplets);
 
       std::vector<char> usedIndexes(tuplets.size(), 0);
@@ -888,30 +1154,54 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
             tupletIntervals.push_back(tupletInterval(tuplet));
 
       std::vector<int> bestIndexes;
-      TupletErrorResult minError;
-      bool first = true;
-      while (true) {
-            const auto result = commonIndexes.generateNext();
-            std::vector<std::vector<int>> tupletGroupsToTest;
-            for (int i: result.first)
-                  tupletGroupsToTest.push_back(std::vector<int>({i}));
-            if (!uncommonGroup.empty())
-                  tupletGroupsToTest.push_back(uncommonGroup);
+      const size_t N = tuplets.size();
+      const double permutationSolutionSize = commonIndexes.combinationCount()
+                                        * fact(commonIndexes.size()) * N;
+      const double dynamicSolutionSize = N * (N * N - N + 2);
 
-            const auto indexesAndError = minimizeQuantError(tupletGroupsToTest, tuplets,
-                                                            tupletIntervals);
-            if (first) {
-                  first = false;
-                  minError = indexesAndError.second;
-                  bestIndexes = indexesAndError.first;
-                  }
-            else if (indexesAndError.second < minError) {
-                  minError = indexesAndError.second;
-                  bestIndexes = indexesAndError.first;
-                  }
+      if (false && permutationSolutionSize <= dynamicSolutionSize) {
+            TupletErrorResult minError;
+            bool first = true;
+            while (true) {
+                  const auto result = commonIndexes.generateNext();
+                  std::vector<std::vector<int>> tupletGroupsToTest;
+                  for (int i: result.first)
+                        tupletGroupsToTest.push_back(std::vector<int>({i}));
+                  if (!uncommonGroup.empty())
+                        tupletGroupsToTest.push_back(uncommonGroup);
 
-            if (result.second)
-                  break;
+                  const auto indexesAndError = minimizeQuantError(tupletGroupsToTest, tuplets,
+                                                                  tupletIntervals);
+                  if (first) {
+                        first = false;
+                        minError = indexesAndError.second;
+                        bestIndexes = indexesAndError.first;
+                        }
+                  else if (indexesAndError.second < minError) {
+                        minError = indexesAndError.second;
+                        bestIndexes = indexesAndError.first;
+                        }
+
+                  if (result.second)
+                        break;
+                  }
+            }
+      else {
+            std::vector<std::vector<PenaltyParams>> penalties(tuplets.size());
+            for (size_t i = 0; i != tuplets.size(); ++i)
+                  penalties[i].resize(tuplets.size());
+            std::vector<std::vector<int>> optimalPaths(tuplets.size());   // first col will be unused
+
+            int finalIndex = 0;
+            for (int pos = 0; pos != (int)tuplets.size(); ++pos) {
+                  int newFinalIndex = makeApproxOptimStep(penalties, optimalPaths, pos,
+                                                          tuplets, tupletIntervals);
+                  if (newFinalIndex == -1)
+                        break;
+                  finalIndex = newFinalIndex;
+                  }
+                        // get the optimal tuplets found via dynamic programming
+            bestIndexes = collectOptimalTuplets(optimalPaths, finalIndex);
             }
 
       std::vector<TupletInfo> newTuplets;

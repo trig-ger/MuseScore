@@ -107,14 +107,16 @@ class TupletCommonIndexes
    public:
       void add(const std::vector<int> &commonIndexes);
       std::pair<std::vector<int>, bool> generateNext();
+      int combinationCount() const { return maxCount_; }
+      size_t size() const { return indexes_.size(); }
 
-      const std::vector<std::vector<int>>& allIndexes() const { return indexes; } // for testing
+      const std::vector<std::vector<int>>& allIndexes() const { return indexes_; } // for testing
 
    private:
-      std::vector<std::vector<int>> indexes;
-      std::vector<int> current;        // indexes of tuplet indexes
-      int counter = 0;
-      int maxCount = 1;
+      std::vector<std::vector<int>> indexes_;
+      std::vector<int> current_;        // indexes of tuplet indexes
+      int counter_ = 0;
+      int maxCount_ = 1;
       };
 
 } // namespace MidiTuplet
