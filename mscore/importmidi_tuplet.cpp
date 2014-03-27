@@ -14,6 +14,7 @@
 
 
 #include <set>
+#include <fstream>
 
 
 namespace Ms {
@@ -444,6 +445,16 @@ class TupletErrorResult
             return value < 0;
             }
 
+      void print()
+            {
+            std::ofstream f("permutation_algorithm.txt", std::ios::app);
+            f << tupletAverageError << " "
+              << relativeUsedChordPlaces << " "
+              << sumLengthOfRests.numerator() << " " << sumLengthOfRests.denominator() << " "
+              << voiceCount << " "
+              << tupletCount << "\n";
+            }
+
    private:
       static double div(double val1, double val2)
             {
@@ -492,7 +503,7 @@ TupletErrorResult findTupletError(const std::list<int> &indexes,
             }
 
       return TupletErrorResult{
-                  sumError.ticks() * 1.0 / sumChordCount,
+                  sumError.numerator() * 1.0 / (sumError.denominator() * sumChordCount),
                   sumChordCount * 1.0 / sumChordPlaces,
                   sumLengthOfRests,
                   voiceCount,
@@ -865,6 +876,8 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
             if (result.second)
                   break;
             }
+
+      minError.print();
 
       std::vector<TupletInfo> newTuplets;
       for (int i: bestIndexes)
