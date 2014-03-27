@@ -14,6 +14,7 @@
 
 
 #include <set>
+#include <fstream>
 
 
 namespace Ms {
@@ -438,6 +439,16 @@ class TupletErrorResult
                          + div(tupletCount, er.tupletCount);
                   }
             return value < 0;
+            }
+
+      void print()
+            {
+            std::ofstream f("permutation_optimized_algorithm.txt", std::ios::app);
+            f << tupletAverageError << " "
+              << relativeUsedChordPlaces << " "
+              << sumLengthOfRests.numerator() << " " << sumLengthOfRests.denominator() << " "
+              << voiceCount << " "
+              << tupletCount << "\n";
             }
 
    private:
@@ -951,6 +962,9 @@ void filterTuplets(std::vector<TupletInfo> &tuplets)
       TupletErrorResult minError;
       findBestTuplets(bestIndexes, minError, availableIndexes, uncommonGroup,
                       tuplets, tupletIntervals);
+
+      minError.print();
+
       std::vector<TupletInfo> newTuplets;
       for (int i: bestIndexes)
             newTuplets.push_back(tuplets[i]);
