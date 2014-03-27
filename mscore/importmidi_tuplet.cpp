@@ -14,6 +14,7 @@
 
 
 #include <set>
+#include <fstream>
 
 
 namespace Ms {
@@ -371,6 +372,16 @@ class TupletErrorResult
                          + div(tupletCount, er.tupletCount);
                   }
             return value < 0;
+            }
+
+      void print()
+            {
+            std::ofstream f("recursive_algorithm.txt", std::ios::app);
+            f << tupletAverageError << " "
+              << relativeUsedChordPlaces << " "
+              << sumLengthOfRests.numerator() << " " << sumLengthOfRests.denominator() << " "
+              << voiceCount << " "
+              << tupletCount << "\n";
             }
 
    private:
@@ -796,6 +807,8 @@ std::vector<int> findBestTuplets(const std::vector<TupletInfo> &tuplets)
 
       findNextTuplet(selectedTuplets, bestTupletIndexes, minCurrentError,
                      tupletCommons, tuplets, tupletIntervals);
+
+      minCurrentError.print();
 
       return bestTupletIndexes;
       }
