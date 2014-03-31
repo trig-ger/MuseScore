@@ -155,25 +155,63 @@ ReducedFraction findQuantRaster(
 // input chords - sorted by onTime value
 
 void quantizeChords(std::multimap<ReducedFraction, MidiChord> &chords,
-                    const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tupletEvents,
+                    const std::multimap<ReducedFraction, MidiTuplet::TupletData> &tuplets,
                     const TimeSigMap *sigmap)
       {
       std::multimap<ReducedFraction, MidiChord> quantizedChords;
-      for (auto &chordEvent: chords) {
-            MidiChord chord = chordEvent.second;     // copy chord
-            auto onTime = chordEvent.first;
-            auto raster = findQuantRaster(onTime, chord.voice, tupletEvents, chords, sigmap);
+
+      ReducedFraction barStart(0, 1);
+      ReducedFraction barFraction;
+      ReducedFraction barLen;
+
+      auto sigIt = sigmap->begin();
+      auto tupletIt = tuplets.begin();
+
+      for (auto chordIt = chords.begin(); chordIt != chords.end(); ++chordIt) {
+            MidiChord chord = chordIt->second;     // copy chord
+            auto onTime = chordIt->first;
+            if (sigIt != sigmap->end() && onTime >= ReducedFraction::fromTicks(sigIt->first)) {
+                  barFraction = ReducedFraction(sigIt->second.timesig());
+                  barLen = ReducedFraction((MScore::division * 4 * barFraction.numerator())
+                                           / barFraction.denominator(), 1);
+                  ++sigIt;
+                  }
+            if (onTime >= barStart + barLen)
+                  barStart += barLen;
+
+
+            ReducedFraction raster;
+            const auto tupletIt = MidiTuplet::findTupletContainsTime(voice, time, tuplets);
+
+            if (tupletIt != tuplets.end() && time > tupletIt->first)
+                  raster = tupletIt->second.tupletQuant;   // quantize onTime with tuplet quant
+            else {
+                              // quantize onTime with regular quant
+                  const auto startBarTick = findBarStart(time, sigmap);
+                  const auto endBarTick = startBarTick
+                              + ReducedFraction(sigmap->timesig(startBarTick.ticks()).timesig());
+                  const auto startBarChordIt = MChord::findFirstChordInRange(
+                                  startBarTick, endBarTick, chords.begin(), chords.end());
+                  raster = findRegularQuantRaster(startBarChordIt, chords.end(), endBarTick);
+                  }
+
+
+
+
+
+
+            auto raster = findQuantRaster(onTime, chord.voice, tuplets, chords, sigmap);
             const auto barStart = findBarStart(onTime, sigmap);
-            onTime = barStart + Quantize::quantizeValue(onTime - barStart, raster);
+            onTime = barStart + quantizeValue(onTime - barStart, raster);
 
             for (auto it = chord.notes.begin(); it != chord.notes.end(); ) {
                   auto &note = *it;
                   auto offTime = chordEvent.first + note.len;
-                  raster = findQuantRaster(offTime, chord.voice, tupletEvents, chords, sigmap);
+                  raster = findQuantRaster(offTime, chord.voice, tuplets, chords, sigmap);
                   if (Meter::isSimpleNoteDuration(raster))    // offTime is not inside tuplet
                         raster = reduceRasterIfDottedNote(note.len, raster);
 
-                  offTime = barStart + Quantize::quantizeValue(offTime - barStart, raster);
+                  offTime = barStart + quantizeValue(offTime - barStart, raster);
                   note.len = offTime - onTime;
                   if (note.len < MChord::minAllowedDuration()) {
                         it = chord.notes.erase(it);

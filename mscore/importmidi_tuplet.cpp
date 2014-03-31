@@ -1864,6 +1864,64 @@ void correctChordOnTimeInTuplets(std::vector<TupletInfo> &tuplets,
             }
       }
 
+void quantizeChords(
+            std::vector<TupletInfo> &tuplets,
+            std::list<std::multimap<ReducedFraction, MidiChord>::iterator> &nonTuplets,
+            std::multimap<ReducedFraction, MidiChord> &chords,
+            const ReducedFraction &startBarTick)
+      {
+                  // <MidiNote, oldOnTime>
+      std::map<MidiNote *, ReducedFraction> notQuantizedNotes;
+
+      for (auto &tuplet: tuplets) {
+            for (auto it = tuplet.chords.begin(); it != tuplet.chords.end(); ++it) {
+                              // quantize on time values
+                  const auto oldOnTime = it->first;
+                  const auto newOnTime = startBarTick + quantizeValue(oldOnTime - startBarTick,
+                                                                      tuplet.tupletQuant);
+                  const MidiChord midiChord = it->second->second;
+                  chords.erase(it->second);
+                  tuplet.chords.erase(it);
+                  const auto newChordIt = chords.insert({newOnTime, midiChord});
+                  it = tuplet.chords.insert({newOnTime, newChordIt});
+                              // quantize off time values
+                  MidiChord &chord = newChordIt->second;
+                  for (auto it = chord.notes.begin(); it != chord.notes.end(); ) {
+                        auto &note = *it;
+                        auto offTime = oldOnTime + note.len;
+                        raster = findQuantRaster(offTime, chord.voice, tuplets, chords, sigmap);
+                        if (Meter::isSimpleNoteDuration(raster))    // offTime is not inside tuplet
+                              raster = reduceRasterIfDottedNote(note.len, raster);
+
+                        offTime = barStart + quantizeValue(offTime - barStart, raster);
+                        note.len = offTime - onTime;
+                        if (note.len < MChord::minAllowedDuration()) {
+                              it = chord.notes.erase(it);
+                              qDebug() << "quantizeChords: note was removed due to its short length";
+                              continue;
+                              }
+                        ++it;
+                        }
+                  if (!chord.notes.isEmpty())
+                        quantizedChords.insert({onTime, chord});
+                  }
+            }
+
+      for (auto &note: notQuantizedNotes) {
+                        // all these notes have on time not inside tuplet
+            auto offTime = note.second + note.first->len;
+            raster = reduceRasterIfDottedNote(note.len, raster);
+
+            offTime = barStart + quantizeValue(offTime - barStart, raster);
+            note.len = offTime - onTime;
+            if (note.len < MChord::minAllowedDuration()) {
+                  it = chord.notes.erase(it);
+                  qDebug() << "quantizeChords: note was removed due to its short length";
+                  continue;
+                  }
+            }
+      }
+
 std::vector<TupletData> findTuplets(const ReducedFraction &startBarTick,
                                     const ReducedFraction &endBarTick,
                                     const ReducedFraction &barFraction,
@@ -1967,6 +2025,7 @@ std::vector<TupletData> findTuplets(const ReducedFraction &startBarTick,
                  "Overlapping tuplet and non-tuplet voices for the case !useMultipleVoices");
 
       assignVoices(chords, tuplets, nonTuplets, startBarTick, endBarTick, regularRaster);
+      quantizeChords(tuplets, nonTuplets);
       correctChordOnTimeInTuplets(tuplets, chords, startBarTick);
 
       return convertToData(tuplets);
