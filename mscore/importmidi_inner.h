@@ -116,6 +116,13 @@ QString defaultCharset();
 std::string fromUchar(const uchar *text);
 
 } // namespace MidiCharset
+
+namespace MidiTempo {
+
+ReducedFraction time2Tick(double time, double ticksPerSec);
+double findBasicTempo(const std::multimap<int, MTrack> &tracks);
+
+} // namespace MidiTempo
 } // namespace Ms
 
 
