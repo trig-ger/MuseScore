@@ -12,6 +12,7 @@
 
 #include <set>
 #include <functional>
+#include <fstream>
 
 
 namespace Ms {
@@ -68,6 +69,8 @@ double findChordSalience2(
                                        double)> &findChordSalience,
             double ticksPerSec)
       {
+      std::ofstream chordFile("chords.txt");
+
       ::EventList events;
       double minSalience = std::numeric_limits<double>::max();
       for (const auto &chord: chords) {
@@ -77,6 +80,10 @@ double findChordSalience2(
             if (e.salience < minSalience)
                   minSalience = e.salience;
             events.push_back(e);
+
+            for (const auto &note: chord.second.notes) {
+                  chordFile << e.time << " " << note.pitch << '\n';
+                  }
             }
                   // all saliences should be non-negative
       if (minSalience < 0) {
@@ -221,6 +228,11 @@ void findBeatLocations(
             }
       if (!beatResults.empty()) {
             preferences.midiImportOperations.setHumanBeats(beatResults.begin()->second);
+
+            std::ofstream of("beats_dixon.txt");
+            for (const auto &b: beatResults.begin()->second) {
+                  of << (b.ticks() * 1.0 / ticksPerSec) << '\n';
+                  }
             }
       }
 
