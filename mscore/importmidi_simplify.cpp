@@ -183,6 +183,11 @@ void minimizeNumberOfRests(
             }
       }
 
+void separateVoices(std::multimap<ReducedFraction, MidiChord> &chords)
+      {
+
+      }
+
 void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap)
       {
       auto &opers = preferences.midiImportOperations;
@@ -200,6 +205,8 @@ void simplifyNotation(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigm
 
             if (opers.currentTrackOperations().minimizeNumberOfRests)
                   minimizeNumberOfRests(chords, sigmap, mtrack.tuplets);
+
+            separateVoices();
             }
       }
 
