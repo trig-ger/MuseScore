@@ -195,8 +195,9 @@ findTupletsInBarForDuration(
       return tupletsData;
       }
 
-std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator
-findTupletForTimeRange(
+std::pair<std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator,
+          std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator>
+findTupletsForTimeRange(
             int voice,
             const ReducedFraction &onTime,
             const ReducedFraction &len,
@@ -205,8 +206,11 @@ findTupletForTimeRange(
       Q_ASSERT_X(len >= ReducedFraction(0, 1),
                  "MidiTuplet::findTupletForTimeRange", "Negative length of the time range");
 
+      auto beg = tupletEvents.end();
+      auto end = tupletEvents.end();
+
       if (tupletEvents.empty())
-            return tupletEvents.end();
+            return {beg, end};
 
       auto it = tupletEvents.upper_bound(onTime + len);
       if (it != tupletEvents.begin())
@@ -220,13 +224,15 @@ findTupletForTimeRange(
                              ? onTime + len <= tupletOffTime
                              : onTime < tupletOffTime)
                             )) {
-                  return it;
+                  if (beg == tupletEvents.end())
+                        beg = it;
+                  end = std::next(it);
                   }
             if (it == tupletEvents.begin())
                   break;
             --it;
             }
-      return tupletEvents.end();
+      return {beg, end};
       }
 
 std::multimap<ReducedFraction, MidiTuplet::TupletData>::const_iterator
@@ -235,7 +241,7 @@ findTupletContainsTime(
             const ReducedFraction &time,
             const std::multimap<ReducedFraction, TupletData> &tupletEvents)
       {
-      return findTupletForTimeRange(voice, time, ReducedFraction(0, 1), tupletEvents);
+      return findTupletsForTimeRange(voice, time, ReducedFraction(0, 1), tupletEvents).first;
       }
 
 std::set<std::pair<const ReducedFraction, MidiChord> *>
@@ -706,7 +712,7 @@ void findTuplets(
       }
 
 void setAllTupletOffTimes(
-            const std::multimap<ReducedFraction, TupletData> &tupletEvents,
+            std::multimap<ReducedFraction, TupletData> &tupletEvents,
             std::multimap<ReducedFraction, MidiChord> &chords,
             const TimeSigMap *sigmap)
       {
@@ -722,7 +728,8 @@ void setAllTupletOffTimes(
                                           chord.voice, note.offTime, tupletEvents);
                         if (it != tupletEvents.end()) {
                               note.isInTuplet = true;
-                              note.tuplet = it;
+                                          // hack to remove constness of iterator
+                              note.tuplet = tupletEvents.erase(it, it);
                               }
                         }
                   }
