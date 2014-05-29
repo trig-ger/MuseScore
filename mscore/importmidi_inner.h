@@ -123,6 +123,18 @@ ReducedFraction time2Tick(double time, double ticksPerSec);
 double findBasicTempo(const std::multimap<int, MTrack> &tracks);
 
 } // namespace MidiTempo
+
+namespace MidiBar {
+
+ReducedFraction findBarStart(const ReducedFraction &time, const TimeSigMap *sigmap);
+
+} // namespace MidiBar
+
+namespace MidiDuration {
+
+double durationCount(const QList<std::pair<ReducedFraction, TDuration> > &durations);
+
+} // namespace MidiDuration
 } // namespace Ms
 
 
