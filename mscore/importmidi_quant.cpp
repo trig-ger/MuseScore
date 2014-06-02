@@ -562,6 +562,9 @@ void checkOffTime(
                   break;
                   }
             }
+
+      Q_ASSERT_X(note.offTime - chordIt->first >= MChord::minAllowedDuration(),
+                 "Quantize::quantizeOffTimes", "Too small note length");
       }
 
 #endif
@@ -751,6 +754,7 @@ void findQuants(
                   if (len < MChord::minAllowedDuration())
                         d.canMergeWithPrev = true;
                   }
+
             if (tupletQuant != ReducedFraction(-1, 1)) {
                   const MidiTuplet::TupletData &tuplet = (*chords.begin())->second.tuplet->second;
                   d.quant = tupletQuant;
@@ -763,6 +767,20 @@ void findQuants(
                         maxQuant *= 2;
                   d.quantForLen = quantForLen(
                            qMin(MChord::minNoteLen(*chordIt), rangeEnd - rangeStart), maxQuant);
+
+                              // inter on time interval can be quantization length by default
+                  ReducedFraction quantLen(0, 1);
+                  auto next = std::next(it);
+                  while (next != chords.end() && (*next)->second.voice != chordIt->second.voice)
+                        ++next;
+                  if (next != chords.end())
+                        quantLen = qMin((*next)->first - chordIt->first, basicQuant);
+
+                  while (d.quantForLen * 2 <= quantLen)
+                        d.quantForLen *= 2;
+                  if (d.quantForLen < quantLen
+                              && (d.quantForLen * 2 - quantLen) < d.quantForLen - quantLen)
+                        d.quantForLen *= 2;
                   }
 
             Q_ASSERT_X(d.quant <= rangeEnd - rangeStart,
@@ -870,7 +888,9 @@ void applyDynamicProgramming(std::vector<QuantData> &quantData)
             for (int pos = 0; pos != (int)d.positions.size(); ++pos) {
                   QuantPos &p = d.positions[pos];
                   const auto timePenalty = (d.chord->first - p.time).absValue().toDouble();
-                  const double levelDiff = 1 + qAbs(d.metricalLevelForLen - p.metricalLevel);
+                  double levelDiff = 1 + qAbs(d.metricalLevelForLen - p.metricalLevel);
+                  if (isHuman)
+                        levelDiff += 10;
 
                   if (p.metricalLevel <= d.metricalLevelForLen)
                         p.penalty = timePenalty * levelDiff;
