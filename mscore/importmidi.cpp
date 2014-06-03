@@ -941,7 +941,7 @@ void convertMidi(Score *score, const MidiFile *mf)
       Q_ASSERT_X(!doNotesOverlap(tracks),
                  "convertMidi", "There are overlapping notes of the same voice that is incorrect");
 
-      LRHand::splitIntoLeftRightHands(tracks);
+//      LRHand::splitIntoLeftRightHands(tracks);
       quantizeAllTracks(tracks, sigmap, lastTick);
       MChord::removeOverlappingNotes(tracks);
 
@@ -952,8 +952,8 @@ void convertMidi(Score *score, const MidiFile *mf)
                  "convertMidi", "There are notes of length < min allowed duration");
 
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
-      MidiVoice::separateVoices(tracks, sigmap);
-      Simplify::simplifyDurations(tracks, sigmap);
+//      MidiVoice::separateVoices(tracks, sigmap);
+//      Simplify::simplifyDurations(tracks, sigmap);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);
       MidiDrum::removeRests(tracks, sigmap);

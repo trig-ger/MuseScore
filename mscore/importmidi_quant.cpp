@@ -728,6 +728,39 @@ void findChordRangeStarts(
             }
       }
 
+// enlarge quantization value to interval between successive chords
+// if average pitch is not
+
+void enlargeQuantForLen(
+            ReducedFraction &quantForLen,
+            const std::vector<std::multimap<ReducedFraction, MidiChord>::iterator>::const_iterator &it,
+            const std::vector<std::multimap<ReducedFraction, MidiChord>::iterator> &chords,
+            const ReducedFraction &basicQuant)
+      {
+      const int octave = 12;
+      const auto chordIt = *it;
+      const int currentAveragePitch = MChord::chordAveragePitch(chordIt->second.notes);
+
+      ReducedFraction quantLen(0, 1);
+      auto next = std::next(it);
+      while (next != chords.end()) {
+            const MidiChord &nextChord = (*next)->second;
+            const int nextAveragePitch = MChord::chordAveragePitch(nextChord.notes);
+            if (nextChord.voice == chordIt->second.voice
+                        && qAbs(nextAveragePitch - currentAveragePitch) <= octave) {
+                  break;
+                  }
+            ++next;
+            }
+      if (next != chords.end())
+            quantLen = qMin((*next)->first - chordIt->first, basicQuant);
+
+      while (quantForLen * 2 <= quantLen)
+            quantForLen *= 2;
+      if (quantForLen < quantLen && (quantForLen * 2 - quantLen) < quantForLen - quantLen)
+            quantForLen *= 2;
+      }
+
 void findQuants(
             std::vector<QuantData> &data,
             const std::vector<std::multimap<ReducedFraction, MidiChord>::iterator> &chords,
@@ -763,6 +796,8 @@ void findQuants(
                         maxQuant *= 2;
                   d.quantForLen = quantForLen(
                            qMin(MChord::minNoteLen(*chordIt), rangeEnd - rangeStart), maxQuant);
+
+                  enlargeQuantForLen(d.quantForLen, it, chords, basicQuant);
                   }
 
             Q_ASSERT_X(d.quant <= rangeEnd - rangeStart,
@@ -875,14 +910,22 @@ void applyDynamicProgramming(std::vector<QuantData> &quantData)
             QuantData &d = quantData[chordIndex];
             for (int pos = 0; pos != (int)d.positions.size(); ++pos) {
                   QuantPos &p = d.positions[pos];
+
                   const auto timePenalty = (d.chord->first - p.time).absValue().toDouble();
-                  const double levelDiff = 1 + qAbs(d.metricalLevelForLen - p.metricalLevel);
+                  const double levelDiff = qAbs(d.metricalLevelForLen - p.metricalLevel);
 
-                  if (p.metricalLevel <= d.metricalLevelForLen)
-                        p.penalty = timePenalty * levelDiff;
-                  else
-                        p.penalty = (isHuman) ? timePenalty / levelDiff : timePenalty;
-
+                  if (isHuman) {
+                        if (p.metricalLevel <= d.metricalLevelForLen)
+                              p.penalty = timePenalty + levelDiff * d.quantForLen.toDouble();
+                        else
+                              p.penalty = timePenalty / (1 + levelDiff);
+                        }
+                  else {
+                        if (p.metricalLevel <= d.metricalLevelForLen)
+                              p.penalty = timePenalty * (1 + levelDiff);
+                        else
+                              p.penalty = timePenalty;
+                        }
                   if (chordIndex == 0)
                         continue;
 
