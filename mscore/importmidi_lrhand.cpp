@@ -174,19 +174,29 @@ int findSimilarityPenalty(
             const bool isLowOctave = isOctave(notes, 0, splitPoint);
             const bool isPrevLowOctave = isOctave(prevNotes, 0, prevSplitPoint);
 
-            if (isLowOctave && isPrevLowOctave)             // octaves
+            if (isLowOctave && isPrevLowOctave) {            // octaves
                   penalty -= 12;
-            else if (splitPoint > 1 && prevSplitPoint > 1)  // accompaniment
-                  penalty -= 5;
+                  }
+            else if (splitPoint > 1 && prevSplitPoint > 1) { // accompaniment
+                  if (splitPoint - 0 == prevSplitPoint - 0)
+                        penalty -= 10;
+                  else
+                        penalty -= 5;
+                  }
             }
       if (splitPoint < notes.size() && prevSplitPoint < prevNotes.size()) {
             const bool isHighOctave = isOctave(notes, splitPoint, notes.size());
             const bool isPrevHighOctave = isOctave(prevNotes, prevSplitPoint, prevNotes.size());
 
-            if (isHighOctave && isPrevHighOctave)
+            if (isHighOctave && isPrevHighOctave) {
                   penalty -= 12;
-            else if (notes.size() - splitPoint > 1 && prevNotes.size() - prevSplitPoint > 1)
-                  penalty -= 5;
+                  }
+            else if (notes.size() - splitPoint > 1 && prevNotes.size() - prevSplitPoint > 1) {
+                  if (notes.size() - splitPoint == prevNotes.size() - prevSplitPoint)
+                        penalty -= 10;
+                  else
+                        penalty -= 5;
+                  }
             }
                   // check for one-note melody
       if (splitPoint - 0 == 1 && prevSplitPoint - 0 == 1)
