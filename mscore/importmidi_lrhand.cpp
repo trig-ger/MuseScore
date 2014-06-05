@@ -162,6 +162,55 @@ bool isOctave(const QList<MidiNote> &notes, int beg, int end)
       return (end - beg == 2 && notes[end - 1].pitch - notes[beg].pitch == octave);
       }
 
+// if intersection - zero distance
+// otherwise - distance between closest pitches of ranges
+
+int pitchRangeDistance(const std::pair<int, int> &range1, const std::pair<int, int> &range2)
+      {
+      int dist = 0;
+      if (range1.first < range2.second && range1.second > range2.first)
+            dist = 0;
+      else if (range1.first >= range2.second)
+            dist = range1.first - range2.second;
+      else
+            dist = range2.first - range1.second;
+
+      Q_ASSERT_X(dist >= 0, "LRHand::pitchRangeDistance", "Negative pitch distance");
+
+      return dist;
+      }
+
+int findAveragePitchPenalty(
+            const QList<MidiNote> &notes,
+            const QList<MidiNote> &prevNotes,
+            int splitPoint,
+            int prevSplitPoint)
+      {
+      int penalty = 0;
+
+      const int octave = 12;
+      int dist = 0;
+
+      if (splitPoint > 0 && prevSplitPoint > 0) {
+            const auto lowPitchRange = MChord::chordPitchRange(notes, 0, splitPoint);
+            const auto prevLowPitchRange = MChord::chordPitchRange(prevNotes, 0, prevSplitPoint);
+            dist = pitchRangeDistance(lowPitchRange, prevLowPitchRange);
+            }
+      if (splitPoint < notes.size() && prevSplitPoint < prevNotes.size()) {
+            const auto highPitchRange = MChord::chordPitchRange(notes, splitPoint, notes.size());
+            const auto prevHighPitchRange = MChord::chordPitchRange(
+                                                prevNotes, prevSplitPoint, prevNotes.size());
+            dist = pitchRangeDistance(highPitchRange, prevHighPitchRange);
+            }
+
+      if (dist > octave - 3 && dist <= octave)
+            penalty += 5;
+      else if (dist > octave)
+            penalty += 10;
+
+      return penalty;
+      }
+
 int findSimilarityPenalty(
             const QList<MidiNote> &notes,
             const QList<MidiNote> &prevNotes,
@@ -329,6 +378,8 @@ std::vector<ChordSplitData> findSplits(std::multimap<ReducedFraction, MidiChord>
                                     = splits[pos - 1].possibleSplits[prevSplitPoint].penalty
                                     + findSimilarityPenalty(
                                           notes, prevNotes, splitPoint, prevSplitPoint)
+                                    + findAveragePitchPenalty(
+                                          notes, prevNotes, splitPoint, prevSplitPoint);
                                     + findIntersectionPenalty(
                                           it->first, pos - 1, prevSplitPoint,
                                           maxChordLen, splits,

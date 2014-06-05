@@ -366,6 +366,31 @@ void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks)
             }
       }
 
+std::pair<int, int> chordPitchRange(const QList<MidiNote> &notes, int beg, int end)
+      {
+      Q_ASSERT_X(!notes.isEmpty(), "MChord::chordPitchRange", "Empty notes");
+      Q_ASSERT_X(end > 0 && beg >= 0 && end > beg,
+                 "MChord::chordPitchRange", "Invalid note indexes");
+
+      int minPitch = std::numeric_limits<int>::max();
+      int maxPitch = std::numeric_limits<int>::min();
+
+      for (int i = beg; i != end; ++i) {
+            if (notes[i].pitch < minPitch)
+                  minPitch = notes[i].pitch;
+            if (notes[i].pitch > maxPitch)
+                  maxPitch = notes[i].pitch;
+            }
+      return {minPitch, maxPitch};
+      }
+
+std::pair<int, int> chordPitchRange(const QList<MidiNote> &notes)
+      {
+      Q_ASSERT_X(!notes.isEmpty(), "MChord::chordPitchRange", "Empty notes");
+
+      return chordPitchRange(notes, 0, notes.size());
+      }
+
 int chordAveragePitch(const QList<MidiNote> &notes, int beg, int end)
       {
       Q_ASSERT_X(!notes.isEmpty(), "MChord::chordAveragePitch", "Empty notes");

@@ -105,8 +105,13 @@ void collectChords(std::multimap<int, MTrack> &tracks);
 void removeOverlappingNotes(std::multimap<int, MTrack> &tracks);
 void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks);
 void splitUnequalChords(std::multimap<int, MTrack> &tracks);
+
+std::pair<int, int> chordPitchRange(const QList<MidiNote> &notes, int beg, int end);
+std::pair<int, int> chordPitchRange(const QList<MidiNote> &notes);
+
 int chordAveragePitch(const QList<MidiNote> &notes, int beg, int end);
 int chordAveragePitch(const QList<MidiNote> &notes);
+
 
 std::map<int, ReducedFraction>
 findMaxChordLengths(const std::multimap<ReducedFraction, MidiChord> &chords);
