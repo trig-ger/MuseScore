@@ -369,10 +369,14 @@ std::vector<ChordSplitData> findSplits(std::multimap<ReducedFraction, MidiChord>
 
             for (int splitPoint = 0; splitPoint <= notes.size(); ++splitPoint) {
                   SplitTry splitTry;
-                  splitTry.penalty = findPitchWidthPenalty(notes, splitPoint)
-                                    + findDurationPenalty(notes, splitPoint)
-                                    + findNoteCountPenalty(notes, splitPoint)
-                                    + findVelocityPenalty(notes, splitPoint);
+
+                  const int pitchWidthPenalty = findPitchWidthPenalty(notes, splitPoint);
+                  const int durationPenalty = findDurationPenalty(notes, splitPoint);
+                  const int noteCountPenalty = findNoteCountPenalty(notes, splitPoint);
+                  const int velocityPenalty = findVelocityPenalty(notes, splitPoint);
+
+                  splitTry.penalty = pitchWidthPenalty + durationPenalty
+                                    + noteCountPenalty + velocityPenalty;
 
                   if (pos > 0) {
                         int bestPrevSplitPoint = -1;
@@ -382,19 +386,22 @@ std::vector<ChordSplitData> findSplits(std::multimap<ReducedFraction, MidiChord>
                         for (int prevSplitPoint = 0;
                                  prevSplitPoint <= prevNotes.size(); ++prevSplitPoint) {
 
-                              const int prevPenalty
-                                    = splits[pos - 1].possibleSplits[prevSplitPoint].penalty
-                                    + findSimilarityPenalty(
-                                          notes, prevNotes, splitPoint, prevSplitPoint)
-                                    + findPrevVelocityPenalty(
-                                          notes, prevNotes, splitPoint, prevSplitPoint)
-                                    + findIntersectionPenalty(
-                                          it->first, pos - 1, prevSplitPoint,
-                                          maxChordLen, splits,
-                                          splitPoint > 0, splitPoint < notes.size());
+                              const int prevPenalty =
+                                             splits[pos - 1].possibleSplits[prevSplitPoint].penalty;
+                              const int similarityPenalty = findSimilarityPenalty(
+                                                      notes, prevNotes, splitPoint, prevSplitPoint);
+                              const int prevVelocityPenalty = findPrevVelocityPenalty(
+                                                      notes, prevNotes, splitPoint, prevSplitPoint);
+                              const int intersectionPenalty = findIntersectionPenalty(
+                                                      it->first, pos - 1, prevSplitPoint,
+                                                      maxChordLen, splits,
+                                                      splitPoint > 0, splitPoint < notes.size());
 
-                              if (prevPenalty < minPenalty) {
-                                    minPenalty = prevPenalty;
+                              const int penalty = prevPenalty + similarityPenalty
+                                          + prevVelocityPenalty + intersectionPenalty;
+
+                              if (penalty < minPenalty) {
+                                    minPenalty = penalty;
                                     bestPrevSplitPoint = prevSplitPoint;
                                     }
                               }
