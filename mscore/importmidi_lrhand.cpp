@@ -272,7 +272,7 @@ int findPrevVelocityPenalty(
 
             if (prevLowDiff - currentDiff > VELOCITY_TOL
                         || prevHighDiff - currentDiff > VELOCITY_TOL) {
-                  penalty = 10;
+                  penalty = 25;
                   }
             }
 
