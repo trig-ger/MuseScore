@@ -213,6 +213,72 @@ bool areOffTimesEqual(const QList<MidiNote> &notes, int beg, int end)
       return areEqual;
       }
 
+int findAverageVelocity(const QList<MidiNote> &notes, int beg, int end)
+      {
+      Q_ASSERT_X(end > 0 && beg >= 0 && end > beg,
+                 "LRHand::findAverageVelocity", "Invalid note indexes");
+
+      int sum = 0;
+      for (int i = beg; i != end; ++i)
+            sum += notes[i].velo;
+
+      return qRound(sum * 1.0 / (end - beg));
+      }
+
+const int VELOCITY_TOL = 12;
+
+int findVelocityPenalty(const QList<MidiNote> &notes, int splitPoint)
+      {
+      int penalty = 0;
+      if (splitPoint == 0 || splitPoint == notes.size())
+            return penalty;
+
+      const int lowAverageVelo = findAverageVelocity(notes, 0, splitPoint);
+      const int highAverageVelo = findAverageVelocity(notes, splitPoint, notes.size());
+      const int diff = qAbs(lowAverageVelo - highAverageVelo);
+
+      if (diff < VELOCITY_TOL)
+            penalty = 0;
+      else if (diff < 1.5 * VELOCITY_TOL)
+            penalty = -5;
+      else if (diff < 2 * VELOCITY_TOL)
+            penalty = -10;
+      else if (diff < 2.5 * VELOCITY_TOL)
+            penalty = -15;
+      else
+            penalty = -20;
+
+      return penalty;
+      }
+
+int findPrevVelocityPenalty(
+            const QList<MidiNote> &notes,
+            const QList<MidiNote> &prevNotes,
+            int splitPoint,
+            int prevSplitPoint)
+      {
+      int penalty = 0;
+
+      if (splitPoint > 0 && prevSplitPoint > 0
+                  && splitPoint < notes.size() && prevSplitPoint < prevNotes.size()) {
+            const int lowAverageVelo = findAverageVelocity(notes, 0, splitPoint);
+            const int highAverageVelo = findAverageVelocity(notes, splitPoint, notes.size());
+            const int prevLowAverageVelo = findAverageVelocity(prevNotes, 0, prevSplitPoint);
+            const int prevHighAverageVelo = findAverageVelocity(
+                                                prevNotes, prevSplitPoint, prevNotes.size());
+            const int currentDiff = qAbs(highAverageVelo - lowAverageVelo);
+            const int prevLowDiff = qAbs(lowAverageVelo - prevLowAverageVelo);
+            const int prevHighDiff = qAbs(highAverageVelo - prevHighAverageVelo);
+
+            if (prevLowDiff - currentDiff > VELOCITY_TOL
+                        || prevHighDiff - currentDiff > VELOCITY_TOL) {
+                  penalty = 10;
+                  }
+            }
+
+      return penalty;
+      }
+
 int findDurationPenalty(const QList<MidiNote> &notes, int splitPoint)
       {
       int penalty = 0;
@@ -305,7 +371,8 @@ std::vector<ChordSplitData> findSplits(std::multimap<ReducedFraction, MidiChord>
                   SplitTry splitTry;
                   splitTry.penalty = findPitchWidthPenalty(notes, splitPoint)
                                     + findDurationPenalty(notes, splitPoint)
-                                    + findNoteCountPenalty(notes, splitPoint);
+                                    + findNoteCountPenalty(notes, splitPoint)
+                                    + findVelocityPenalty(notes, splitPoint);
 
                   if (pos > 0) {
                         int bestPrevSplitPoint = -1;
@@ -318,6 +385,8 @@ std::vector<ChordSplitData> findSplits(std::multimap<ReducedFraction, MidiChord>
                               const int prevPenalty
                                     = splits[pos - 1].possibleSplits[prevSplitPoint].penalty
                                     + findSimilarityPenalty(
+                                          notes, prevNotes, splitPoint, prevSplitPoint)
+                                    + findPrevVelocityPenalty(
                                           notes, prevNotes, splitPoint, prevSplitPoint)
                                     + findIntersectionPenalty(
                                           it->first, pos - 1, prevSplitPoint,
