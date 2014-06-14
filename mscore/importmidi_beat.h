@@ -8,6 +8,7 @@ class TimeSigMap;
 class ReducedFraction;
 class MidiChord;
 class MTrack;
+class Score;
 
 namespace MidiBeat {
 
@@ -19,6 +20,8 @@ void findBeatLocations(
 void adjustChordsToBeats(
             std::multimap<int, MTrack> &tracks,
             ReducedFraction &lastTick);
+
+void detectTempoChanges(const std::multimap<int, MTrack> &tracks, Score *score);
 
 } // namespace MidiBeat
 } // namespace Ms

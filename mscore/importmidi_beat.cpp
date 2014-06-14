@@ -9,6 +9,8 @@
 #include "preferences.h"
 #include "libmscore/mscore.h"
 #include "libmscore/sig.h"
+#include "libmscore/score.h"
+#include "libmscore/tempo.h"
 
 #include <set>
 #include <functional>
@@ -316,6 +318,34 @@ void adjustChordsToBeats(std::multimap<int, MTrack> &tracks,
                         }
 
                   std::swap(chords, newChords);
+                  }
+            }
+      }
+
+void detectTempoChanges(const std::multimap<int, MTrack> &tracks, Score *score)
+      {
+      const auto &opers = preferences.midiImportOperations;
+      const auto *beats = opers.getHumanBeats();
+
+      if (beats && !beats->empty() && opers.trackOperations(0).quantize.humanPerformance) {
+            const double basicTempo = MidiTempo::findBasicTempo(tracks);
+            score->tempomap()->clear();
+
+            Q_ASSERT_X(beats->size() > 1, "MidiBeat::setTempoChanges", "Human beat count < 2");
+
+            const auto newBeatLen = ReducedFraction::fromTicks(MScore::division);
+
+            auto it = beats->begin();
+            auto beatStart = *it;
+            for (++it; it != beats->end(); ++it) {
+                  const auto &beatEnd = *it;
+
+                  Q_ASSERT_X(beatEnd > beatStart, "MidiBeat::detectTempoChanges",
+                             "Beat end <= beat start that is incorrect");
+
+                  const double tempoFactor = ((beatEnd - beatStart) / newBeatLen).toDouble();
+                  score->setTempo(beatStart.ticks(), basicTempo * tempoFactor);
+                  beatStart = beatEnd;
                   }
             }
       }
