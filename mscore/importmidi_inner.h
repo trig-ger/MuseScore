@@ -3,6 +3,7 @@
 
 #include "importmidi_fraction.h"
 #include "importmidi_tuplet.h"
+#include "importmidi_operation.h"
 
 #include <vector>
 #include <cstddef>
@@ -16,6 +17,9 @@
 
 
 namespace Ms {
+
+struct MidiTimeSig;
+
 namespace Meter {
 
             // max level for tuplets: duration cannot go over the tuplet boundary
@@ -44,6 +48,10 @@ struct DivisionInfo
       };
 
 enum class DurationType;
+
+ReducedFraction userTimeSigToFraction(const MidiTimeSig &timeSig);
+MidiOperation::TimeSigNumerator fractionNumeratorToUserValue(int n);
+MidiOperation::TimeSigDenominator fractionDenominatorToUserValue(int z);
 
 } // namespace Meter
 
