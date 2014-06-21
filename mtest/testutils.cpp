@@ -23,6 +23,7 @@
 #include "synthesizer/msynthesizer.h"
 #include "mscore/musescoreCore.h"
 #include "mscore/shortcut.h"
+#include "mscore/importmidi_operations.h"
 
 namespace Ms {
 
@@ -152,7 +153,7 @@ Score* MTest::readCreatedScore(const QString& name)
 //   saveScore
 //---------------------------------------------------------
 
-bool MTest::saveScore(Score* score, const QString& name)
+bool MTest::saveScore(Score* score, const QString& name) const
       {
       QFileInfo fi(name);
       MScore::testMode = true;
@@ -163,7 +164,7 @@ bool MTest::saveScore(Score* score, const QString& name)
 //   compareFiles
 //---------------------------------------------------------
 
-bool MTest::compareFiles(const QString& saveName, const QString& compareWith)
+bool MTest::compareFiles(const QString& saveName, const QString& compareWith) const
       {
       QString cmd = "diff";
       QStringList args;
@@ -187,7 +188,7 @@ bool MTest::compareFiles(const QString& saveName, const QString& compareWith)
 //   saveCompareScore
 //---------------------------------------------------------
 
-bool MTest::saveCompareScore(Score* score, const QString& saveName, const QString& compareWith)
+bool MTest::saveCompareScore(Score* score, const QString& saveName, const QString& compareWith) const
       {
       saveScore(score, saveName);
       return compareFiles(saveName, compareWith);
