@@ -618,7 +618,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void midiPanelOnSwitchToFile(const QString &file);
       void midiPanelOnCloseFile(const QString &file);
       void allowShowMidiPanel(const QString &file);
-      void setMidiPrefOperations(const QString &file);
+      void setReopenInProgress(const QString &file);
 
       static Palette* newTempoPalette();
       static Palette* newTextPalette();
