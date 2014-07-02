@@ -781,33 +781,74 @@ void sortVoicesByPitch(const std::map<int, std::vector<
             }
       }
 
-void sortVoices(
-            std::multimap<ReducedFraction, MidiChord> &chords,
-            const TimeSigMap *sigmap)
+bool voiceBlockEndsHere(
+            const std::multimap<ReducedFraction, MidiChord>::iterator &chordIt,
+            const std::multimap<ReducedFraction, MidiChord> &chords,
+            const ReducedFraction &lastTickSoFar)
+      {
+      const auto next = std::next(chordIt);
+      if (next == chords.end())
+            return true;
+
+      auto minNextOnTime = next->first;
+                  // now check tuplet on times that can be less than chord on time
+      for (auto it = next; it != chords.end(); ++it) {
+            const MidiChord &chord = it->second;
+
+            Q_ASSERT_X(chord.barIndex != -1,
+                       "MidiVoice::voiceBlockEndsHere", "Chord bar index is undefined");
+            Q_ASSERT_X(chord.barIndex >= chordIt->second.barIndex,
+                       "MidiVoice::voiceBlockEndsHere", "Bar index of next chord cannot be less");
+
+            if (chord.barIndex > chordIt->second.barIndex)
+                  break;
+            if (chord.isInTuplet) {
+                  const auto &tuplet = chord.tuplet->second;
+                  if (tuplet.onTime < minNextOnTime)
+                        minNextOnTime = tuplet.onTime;
+                  }
+            }
+
+      return minNextOnTime >= lastTickSoFar;
+      }
+
+ReducedFraction findMaxChordOffTime(const MidiChord &chord)
+      {
+      auto maxOffTime = MChord::maxNoteOffTime(chord.notes);
+
+      if (chord.isInTuplet) {
+            const auto &tuplet = chord.tuplet->second;
+            const auto tupletOffTime = tuplet.onTime + tuplet.len;
+            if (tupletOffTime > maxOffTime)
+                  maxOffTime = tupletOffTime;
+            }
+      for (const auto &note: chord.notes) {
+            if (note.isInTuplet) {
+                  const auto &tuplet = note.tuplet->second;
+                  const auto tupletOffTime = tuplet.onTime + tuplet.len;
+                  if (tupletOffTime > maxOffTime)
+                        maxOffTime = tupletOffTime;
+                  }
+            }
+
+      return maxOffTime;
+      }
+
+void sortVoices(std::multimap<ReducedFraction, MidiChord> &chords)
       {
                   // <voice, chords>
       std::map<int, std::vector<std::multimap<ReducedFraction, MidiChord>::iterator>> voiceChords;
-      int maxBarIndex = 0;
+      ReducedFraction lastTickSoFar;      // max off time of all examined chords/tuplets
 
       for (auto it = chords.begin(); it != chords.end(); ++it) {
-            const auto &chord = it->second;
+            const MidiChord &chord = it->second;
+            voiceChords[chord.voice].push_back(it);
 
-            // some notes: if chord off time belongs to tuplet
-            // then this tuplet belongs to the same bar as the chord off time;
-            // same is for chord on time
+            const auto maxOffTime = findMaxChordOffTime(chord);
+            if (maxOffTime > lastTickSoFar)
+                  lastTickSoFar = maxOffTime;
 
-            if (chord.barIndex <= maxBarIndex) {
-                  voiceChords[chord.voice].push_back(it);
-                  const int barIndex = findBarIndexForOffTime(
-                                          MChord::maxNoteOffTime(chord.notes), sigmap);
-                  if (barIndex > maxBarIndex)
-                        maxBarIndex = barIndex;
-                  }
-
-            Q_ASSERT_X(chord.barIndex != -1,
-                       "MidiVoice::sortVoices", "Chord bar index is undefined");
-
-            if (std::next(it) == chords.end() || chord.barIndex > maxBarIndex) {
+            if (voiceBlockEndsHere(it, chords, lastTickSoFar)) {
                   sortVoicesByPitch(voiceChords);
                   voiceChords.clear();
                   }
@@ -853,7 +894,7 @@ bool separateVoices(std::multimap<int, MTrack> &tracks, const TimeSigMap *sigmap
                              "MidiVoice::separateVoices", "Different voices of chord and tuplet "
                              "after voice separation, before voice sort");
 
-                  sortVoices(mtrack.chords, sigmap);
+                  sortVoices(mtrack.chords);
 
                   Q_ASSERT_X(MidiTuplet::areAllTupletsReferenced(mtrack.chords, mtrack.tuplets),
                              "MidiVoice::separateVoices",
