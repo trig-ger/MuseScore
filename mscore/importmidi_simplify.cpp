@@ -19,8 +19,10 @@ namespace Simplify {
 bool hasComplexBeamedDurations(const QList<std::pair<ReducedFraction, TDuration> > &list)
       {
       for (const auto &d: list) {
-            if (d.second == TDuration::V_16TH || d.second == TDuration::V_32ND
-                        || d.second == TDuration::V_64TH || d.second == TDuration::V_128TH) {
+            if (d.second == TDuration::DurationType::V_16TH
+                        || d.second == TDuration::DurationType::V_32ND
+                        || d.second == TDuration::DurationType::V_64TH
+                        || d.second == TDuration::DurationType::V_128TH) {
                   return true;
                   }
             }

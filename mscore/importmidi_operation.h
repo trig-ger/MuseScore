@@ -60,7 +60,4 @@ enum class TimeSigDenominator {
 } // namespace Ms
 
 
-Q_DECLARE_METATYPE(Ms::MidiOperation);
-
-
 #endif // IMPORTMIDI_OPERATION_H
