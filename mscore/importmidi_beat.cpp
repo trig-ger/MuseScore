@@ -10,6 +10,8 @@
 #include "preferences.h"
 #include "libmscore/mscore.h"
 #include "libmscore/sig.h"
+#include "libmscore/score.h"
+#include "libmscore/tempo.h"
 
 #include <functional>
 
@@ -443,6 +445,34 @@ void setTimeSignature(TimeSigMap *sigmap)
       const auto timeSig = Meter::userTimeSigToFraction(data->trackOpers.timeSigNumerator,
                                                         data->trackOpers.timeSigDenominator);
       setTimeSig(sigmap, timeSig);
+      }
+
+void detectTempoChanges(const std::multimap<int, MTrack> &tracks, Score *score)
+      {
+      const auto *data = preferences.midiImportOperations.data();
+      const std::set<ReducedFraction> &beats = data->humanBeatData.beatSet;
+      if (beats.empty())
+            return;
+
+      const double basicTempo = MidiTempo::findBasicTempo(tracks);
+      score->tempomap()->clear();
+
+      Q_ASSERT_X(beats.size() > 1, "MidiBeat::setTempoChanges", "Human beat count < 2");
+
+      const auto newBeatLen = ReducedFraction::fromTicks(MScore::division);
+
+      auto it = beats.begin();
+      auto beatStart = *it;
+      for (++it; it != beats.end(); ++it) {
+            const auto &beatEnd = *it;
+
+            Q_ASSERT_X(beatEnd > beatStart, "MidiBeat::detectTempoChanges",
+                       "Beat end <= beat start that is incorrect");
+
+            const double tempoFactor = ((beatEnd - beatStart) / newBeatLen).toDouble();
+            score->setTempo(beatStart.ticks(), basicTempo * tempoFactor);
+            beatStart = beatEnd;
+            }
       }
 
 } // namespace MidiBeat

@@ -949,6 +949,7 @@ void convertMidi(Score *score, const MidiFile *mf)
 
       MChord::collectChords(tracks);
       MidiBeat::adjustChordsToBeats(tracks, lastTick);
+      MidiBeat::detectTempoChanges(tracks, score);
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
 
                   // for newly opened MIDI file

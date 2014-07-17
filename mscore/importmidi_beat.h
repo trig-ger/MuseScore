@@ -6,6 +6,7 @@
 
 namespace Ms {
 
+class Score;
 class TimeSigMap;
 class ReducedFraction;
 class MidiChord;
@@ -37,6 +38,8 @@ void addLastBeats(std::set<ReducedFraction> &beatSet,
             const ReducedFraction &lastTick,
             int beatsInBar,
             int &addedBeatCount);
+
+void detectTempoChanges(const std::multimap<int, MTrack> &tracks, Score *score);
 
 } // namespace MidiBeat
 } // namespace Ms
