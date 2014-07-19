@@ -187,10 +187,31 @@ class TestImportMidi : public QObject, public MTest
             {
                         // requires 1/32 quantization
             const int defaultQuant = preferences.shortestNote;
-            mf("tuplet_2_voices_3_5_tuplets");
+
+            QString midiFile("tuplet_2_voices_3_5_tuplets");
+            auto &opers = preferences.midiImportOperations;
+            opers.addNewMidiFile(midiFilePath(midiFile));
+            MidiOperations::CurrentMidiFileSetter setCurrentMidiFile(opers, midiFilePath(midiFile));
+            auto &data = *opers.data();
+                        // max voice count = tuplet voice count + 1
+                        // maybe TODO later: set tuplet voice count to max voice count
+                        // if there are no non-tuplet chords intersected with tuplets
+            data.trackOpers.maxVoiceCount.setDefaultValue(MidiOperations::VoiceCount::V_3);
+            mf(midiFile.toStdString().c_str());
+
             preferences.shortestNote = defaultQuant;
             }
-      void tuplet2VoicesTupletNon() { mf("tuplet_2_voices_tuplet_non"); }
+      void tuplet2VoicesTupletNon()
+            {
+            QString midiFile("tuplet_2_voices_tuplet_non");
+            auto &opers = preferences.midiImportOperations;
+            opers.addNewMidiFile(midiFilePath(midiFile));
+            MidiOperations::CurrentMidiFileSetter setCurrentMidiFile(opers, midiFilePath(midiFile));
+            auto &data = *opers.data();
+
+            data.trackOpers.maxVoiceCount.setDefaultValue(MidiOperations::VoiceCount::V_3);
+            mf(midiFile.toStdString().c_str());
+            }
       void tuplet3_5_7tuplets()
             {
             QString midiFile("tuplet_3_5_7_tuplets");
@@ -203,6 +224,7 @@ class TestImportMidi : public QObject, public MTest
             data.trackOpers.changeClef.setDefaultValue(false);
             data.trackOpers.doStaffSplit.setDefaultValue(false);
             data.trackOpers.simplifyDurations.setDefaultValue(false);
+            data.trackOpers.maxVoiceCount.setDefaultValue(MidiOperations::VoiceCount::V_4);
             mf(midiFile.toStdString().c_str());
             }
       void tuplet5_5TupletsRests() { dontSimplify("tuplet_5_5_tuplets_rests"); }

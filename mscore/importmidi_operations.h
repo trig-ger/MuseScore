@@ -97,7 +97,7 @@ struct Opers
       TrackOp<bool> simplifyDurations = true;   // for drum tracks - remove rests and ties
       TrackOp<bool> showStaccato = true;
       TrackOp<bool> doStaffSplit = false;       // for drum tracks - split by voices
-      TrackOp<VoiceCount> maxVoiceCount = VoiceCount::V_4;
+      TrackOp<VoiceCount> maxVoiceCount = VoiceCount::V_2;
       TrackOp<bool> changeClef = true;
       TrackOp<Swing> swing = Swing::NONE;
       TrackOp<bool> removeDrumRests = true;
