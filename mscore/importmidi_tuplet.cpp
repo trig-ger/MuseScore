@@ -522,8 +522,10 @@ void minimizeOffTimeError(
                                              firstChord->second->second.barIndex, barIndex)) {
                         nonTuplets.push_back(firstChord->second);
                         }
-                  if (!newTupletChord.notes.empty())
-                        firstChord->second = chords.insert({onTime, newTupletChord});
+                  if (!newTupletChord.notes.empty()) {
+                        firstChord->second = chords.insert({firstChord->second->first,
+                                                            newTupletChord});
+                        }
                   else {
                         tupletInfo.chords.erase(tupletInfo.chords.begin());
                         if (tupletInfo.chords.empty()) {
