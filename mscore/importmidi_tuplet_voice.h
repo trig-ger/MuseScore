@@ -28,7 +28,8 @@ bool excludeExtraVoiceTuplets(
             std::list<TiedTuplet> &backTiedTuplets,
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const ReducedFraction &basicQuant,
-            const ReducedFraction &barStart);
+            const ReducedFraction &barStart,
+            int barIndex);
 
 std::list<TiedTuplet>
 findBackTiedTuplets(

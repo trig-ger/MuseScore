@@ -320,7 +320,8 @@ bool excludeExtraVoiceTuplets(
             std::list<TiedTuplet> &backTiedTuplets,
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const ReducedFraction &basicQuant,
-            const ReducedFraction &barStart)
+            const ReducedFraction &barStart,
+            int barIndex)
       {
       size_t sz = tuplets.size();
       if (sz == 0)
@@ -351,8 +352,10 @@ bool excludeExtraVoiceTuplets(
                                     }
                               if (!isTied) {
                                     for (const auto &chord: tuplets[i].chords) {
-                                          if (chord.first >= barStart)
+                                          if (doesChordBelongToThisBar(chord.second, barStart,
+                                                                       barIndex, basicQuant, chords)) {
                                                 newNonTuplets.push_back(chord.second);
+                                                }
                                           }
                                     eraseBackTiedTuplet(tuplets[i].id, backTiedTuplets);
                                     --sz;
@@ -387,7 +390,9 @@ void removeUnusedTuplets(
             std::list<TiedTuplet> &backTiedTuplets,
             std::set<std::pair<const ReducedFraction, MidiChord> *> &pendingNonTuplets,
             const ReducedFraction &barStart,
-            int barIndex)
+            int barIndex,
+            const ReducedFraction &basicQuant,
+            const std::multimap<ReducedFraction, MidiChord> &chords)
       {
       if (pendingTuplets.empty())
             return;
@@ -400,8 +405,8 @@ void removeUnusedTuplets(
             else {
                   eraseBackTiedTuplet(tuplets[i].id, backTiedTuplets);
                   for (const auto &chord: tuplets[i].chords) {
-                        if (isChordBelongToThisBar(chord.first, barStart,
-                                                   chord.second->second.barIndex, barIndex)) {
+                        if (doesChordBelongToThisBar(chord.second, barStart, barIndex,
+                                                     basicQuant, chords)) {
                               nonTuplets.push_back(chord.second);
                               pendingNonTuplets.insert(&*chord.second);
                               }
@@ -854,11 +859,11 @@ void assignVoices(
                         tupletIntervals, chords, basicQuant);
       setTupletVoices(tuplets, pendingTuplets, tupletIntervals, basicQuant);
       removeUnusedTuplets(tuplets, nonTuplets, pendingTuplets, backTiedTuplets,
-                          pendingNonTuplets, startBarTick, barIndex);
+                          pendingNonTuplets, startBarTick, barIndex, basicQuant, chords);
 
       if (tupletVoiceLimit() == 1) {
             bool excluded = excludeExtraVoiceTuplets(tuplets, nonTuplets, backTiedTuplets,
-                                                     chords, basicQuant, startBarTick);
+                                                     chords, basicQuant, startBarTick, barIndex);
             if (excluded) {         // to exlude tuplet intervals - rebuild all intervals
                   tupletIntervals.clear();
                   for (const auto &tuplet: tuplets) {

@@ -342,13 +342,56 @@ findTupletChords(const std::vector<TupletInfo> &tuplets)
       return tupletChords;
       }
 
-bool isChordBelongToThisBar(
-            const ReducedFraction &chordOnTime,
+// this function verifies that new chord will not get bar index that breaks
+// the not descending order of already set bar indexes of other chords:
+// for bar indexes != -1: barIndexOfPrevChord <= barIndexOfCurrentChord <= barIndexOfNextChord
+// the order of existing bar indexes is considered to be valid
+
+bool doesChordBelongToThisBar(
+            const std::multimap<ReducedFraction, MidiChord>::const_iterator &chordIt,
             const ReducedFraction &barStart,
-            int chordBarIndex,
-            int currentBarIndex)
+            int currentBarIndex,
+            const ReducedFraction &basicQuant,
+            const std::multimap<ReducedFraction, MidiChord> &chords)
       {
-      return chordOnTime >= barStart || chordBarIndex == currentBarIndex;
+      if (chordIt->second.barIndex == currentBarIndex)
+            return true;
+      if (chordIt->second.barIndex != -1 && chordIt->second.isInTuplet)
+            return false;
+
+                  // check next chords: if there is a chord with barIndex != -1
+                  // such that barIndex < currentBarIndex
+      for (auto it = std::next(chordIt); it != chords.end(); ++it) {
+            if (it->second.voice == chordIt->second.voice && it->second.barIndex != -1) {
+                  if (it->second.barIndex < currentBarIndex)
+                        return false;     // chord bar indexes must be successive
+                  else
+                        break;
+                  }
+                        // next chord cannot be in previous bar (even after quantization)
+                        // if its onTime belongs to this bar
+            if (it->first >= barStart)
+                  break;
+            }
+                  // check previous chords: if there is a chord with barIndex == currentBarIndex
+      if (chordIt != chords.begin()) {
+            for (auto it = std::prev(chordIt); ; --it) {
+
+                  Q_ASSERT_X(it->second.barIndex <= currentBarIndex,
+                             "MidiTuplet::doesChordBelongToThisBar", "Invalid previous bar index");
+
+                  if (it->second.voice == chordIt->second.voice && it->second.barIndex != -1) {
+                        if (it->second.barIndex == currentBarIndex)
+                              return true;      // chord bar indexes must be successive
+                        else
+                              break;
+                        }
+                  if (it == chords.begin())
+                        break;
+                  }
+            }
+      const auto quantOnTime = Quantize::findQuantizedChordOnTime(*chordIt, basicQuant);
+      return quantOnTime >= barStart;
       }
 
 std::list<std::multimap<ReducedFraction, MidiChord>::iterator>
@@ -358,7 +401,8 @@ findNonTupletChords(
             const std::multimap<ReducedFraction, MidiChord>::iterator &endBarChordIt,
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const ReducedFraction &barStart,
-            int barIndex)
+            int barIndex,
+            const ReducedFraction &basicQuant)
       {
       const auto tupletChords = findTupletChords(tuplets);
       std::list<std::multimap<ReducedFraction, MidiChord>::iterator> nonTuplets;
@@ -366,8 +410,7 @@ findNonTupletChords(
                         // because of tol chord on time can belong to previous bar
                         // so don't use it as non-tuplet chord
             if (tupletChords.find(&*it) == tupletChords.end()
-                        && isChordBelongToThisBar(it->first, barStart,
-                                                  it->second.barIndex, barIndex)) {
+                        && doesChordBelongToThisBar(it, barStart, barIndex, basicQuant, chords)) {
                   nonTuplets.push_back(it);
                   }
             }
@@ -518,8 +561,8 @@ void minimizeOffTimeError(
                   for (int i: removedIndexes)
                         newNotes.push_back(notes[i]);
                   notes = newNotes;
-                  if (isChordBelongToThisBar(firstChord->first, startBarTick,
-                                             firstChord->second->second.barIndex, barIndex)) {
+                  if (doesChordBelongToThisBar(firstChord->second, startBarTick,
+                                               barIndex, basicQuant, chords)) {
                         nonTuplets.push_back(firstChord->second);
                         }
                   if (!newTupletChord.notes.empty()) {
@@ -1139,9 +1182,9 @@ void findTuplets(
             }
 
       auto nonTuplets = findNonTupletChords(tuplets, startNonTupletChordIt,
-                                            endBarChordIt, chords, startBarTick, barIndex);
-
-      resetTupletVoices(tuplets);  // because of tol some chords may have non-zero voices
+                                            endBarChordIt, chords, startBarTick,
+                                            barIndex, basicQuant);
+      resetTupletVoices(tuplets);   // because of tol some chords may have non-zero voices
       addChordsBetweenTupletNotes(tuplets, nonTuplets, startBarTick, basicQuant);
       sortNotesByPitch(startBarChordIt, endBarChordIt);
       sortTupletsByAveragePitch(tuplets);
