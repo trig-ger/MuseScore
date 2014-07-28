@@ -873,8 +873,7 @@ void addTupletEvents(std::multimap<ReducedFraction, TupletData> &tupletEvents,
                         QString message = "Tied tuplet and tied chord have different voices, "
                                           "tuplet voice = ";
                         message += QString::number(tiedTuplet.voice) + ", chord voice = ";
-                        message += QString::number(midiChord.voice) + ", bar number (from 1) = ";
-                        message += QString::number(midiChord.barIndex + 1);
+                        message += QString::number(midiChord.voice);
 #endif
                         Q_ASSERT_X(tiedTuplet.voice == midiChord.voice,
                                    "MidiTuplet::addTupletEvents", message.toAscii().data());
@@ -948,17 +947,42 @@ void cleanStaccatoOfNonTuplets(
             }
       }
 
+ReducedFraction desiredChordOnTime(
+            const std::pair<const ReducedFraction, MidiChord> &chord,
+            const ReducedFraction &quant)
+      {
+      ReducedFraction onTime;
+      if ((chord.second.isInTuplet)) {
+            const auto &tuplet = chord.second.tuplet->second;
+            const auto &tupletRatio = MidiTuplet::tupletLimits(tuplet.tupletNumber).ratio;
+            onTime = Quantize::findQuantizedTupletChordOnTime(
+                              chord, tuplet.len, tupletRatio, tuplet.onTime);
+            }
+      else {
+            onTime = Quantize::findMinQuantizedOnTime(chord, quant);
+            }
+      return onTime;
+      }
+
 // chord on time shouldn't go before previous chord on time or after next chord on time
-// this function finds such on time value between previous and next chords
+// this function finds such on time value between previous and next chords, regardless of voice
+// this is a requirement because reordering of chords sounds not satisfactory
+// also bar indexes should be in not descending order, and if on times would be reordered
+// some chords may break this order
+// this function is for non-tuplet input chords only
 
 ReducedFraction findOnTimeBetweenChords(
             const std::pair<const ReducedFraction, MidiChord> &chord,
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const ReducedFraction &basicQuant)
       {
+
+      Q_ASSERT_X(!chord.second.isInTuplet,
+                 "MidiTuplet::findOnTimeBetweenChords", "Input chord should not be in tuplet");
+
       ReducedFraction onTime(-1, 1);
       auto quant = basicQuant;
-
+                  // find iterator from input pair <onTime, chord>
       const auto range = chords.equal_range(chord.first);
       auto chordIt = chords.end();
 
@@ -971,10 +995,11 @@ ReducedFraction findOnTimeBetweenChords(
 
       Q_ASSERT_X(chordIt != chords.end(),
                  "MidiTuplet::findOnTimeBetweenChords", "Chord iterator was not found");
+      Q_ASSERT_X(!chordIt->second.isInTuplet,
+                 "MidiTuplet::findOnTimeBetweenChords", "Found chord should not be in tuplet");
 
                   // chords with equal voices here can have equal on time values
                   // so skip such chords
-      const int voice = chordIt->second.voice;
       while (true) {
             onTime = Quantize::findMinQuantizedOnTime(*chordIt, quant);
             bool changed = false;
@@ -982,9 +1007,8 @@ ReducedFraction findOnTimeBetweenChords(
             if (chordIt != chords.begin()) {
                   auto it = std::prev(chordIt);
                   while (true) {
-                        if (it->first < chord.first && it->second.voice == voice) {
-                              const auto prevChordOnTime
-                                                = Quantize::findMinQuantizedOnTime(*it, quant);
+                        if (it->first < chord.first) {
+                              const auto prevChordOnTime = desiredChordOnTime(*it, quant);
                               if (onTime < prevChordOnTime) {
 
                                     Q_ASSERT_X(quant >= MChord::minAllowedDuration() * 2,
@@ -1005,9 +1029,9 @@ ReducedFraction findOnTimeBetweenChords(
             if (!changed) {
                   for (auto it = std::next(chordIt);
                               it != chords.end() && it->first < chord.first + basicQuant * 2; ++it) {
-                        if (it->first == chord.first || it->second.voice != voice)
+                        if (it->first == chord.first)
                               continue;
-                        const auto nextChordOnTime = Quantize::findMinQuantizedOnTime(*it, quant);
+                        const auto nextChordOnTime = desiredChordOnTime(*it, quant);
                         if (onTime > nextChordOnTime) {
 
                               Q_ASSERT_X(quant >= MChord::minAllowedDuration() * 2,
@@ -1055,9 +1079,8 @@ void setBarIndexes(
             const ReducedFraction &basicQuant)
       {
       for (auto &tuplet: tuplets) {
-            for (auto &chord: tuplet.chords) {
+            for (auto &chord: tuplet.chords)
                   chord.second->second.barIndex = barIndex;
-                  }
             }
 
       for (auto &chord: nonTuplets) {
@@ -1165,9 +1188,8 @@ void findTuplets(
       Q_ASSERT_X(areTupletNonTupletChordsDistinct(tuplets, nonTuplets),
                  "MIDI tuplets: findTuplets", "Tuplets have common chords with non-tuplets");
 
-      setBarIndexes(tuplets, nonTuplets, chords, barIndex, endBarTick, basicQuant);
-
       addTupletEvents(tupletEvents, tuplets, backTiedTuplets);
+      setBarIndexes(tuplets, nonTuplets, chords, barIndex, endBarTick, basicQuant);
       }
 
 void setAllTupletOffTimes(
