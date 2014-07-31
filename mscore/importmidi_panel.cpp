@@ -51,8 +51,7 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
 
       if (opers.data()->processingsOfOpenedFile == 1) {     // initial processing of MIDI file
             ++opers.data()->processingsOfOpenedFile;
-            _model->clear();        // need to be called before resetTableViewState
-            resetTableViewState();
+            _model->clear();
             _model->reset(opers.data()->trackOpers,
                           MidiLyrics::makeLyricsListForUI(),
                           opers.data()->trackCount,
@@ -99,14 +98,6 @@ void ImportMidiPanel::restoreTableViewState()
       const QByteArray vData = opers.data()->VHeaderData;
       _ui->tracksView->restoreHHeaderState(hData);
       _ui->tracksView->restoreVHeaderState(vData);
-      }
-
-void ImportMidiPanel::resetTableViewState()
-      {
-      _ui->tracksView->setFrozenRowCount(0);
-      _ui->tracksView->setFrozenColCount(0);
-      _ui->tracksView->resetHHeader();
-      _ui->tracksView->resetVHeader();
       }
 
 bool ImportMidiPanel::isMidiFile(const QString &fileName)

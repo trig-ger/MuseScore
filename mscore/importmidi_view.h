@@ -64,8 +64,6 @@ class TracksView : public QTableView
       void restoreVHeaderState(const QByteArray &data);
       void setHHeaderResizeMode(QHeaderView::ResizeMode mode);
       void setVHeaderDefaultSectionSize(int size);
-      void resetHHeader();
-      void resetVHeader();
 
    protected:
       void resizeEvent(QResizeEvent *event);
@@ -81,6 +79,8 @@ class TracksView : public QTableView
       void updateFrozenSectionHeight(int,int,int);
       void onHSectionMove(int,int,int);
       void onVSectionMove(int,int,int);
+      void onModelAboutToBeChanged();
+      void onModelChanged();
 
    private:
       void initHorizontalView();
@@ -90,6 +90,8 @@ class TracksView : public QTableView
       void initConnections();
       void setupEditTriggers();
       void updateFrozenTableGeometry();
+      void resetHHeader();
+      void resetVHeader();
 
       void keepVisible(const QModelIndex &previous, const QModelIndex &current);
 

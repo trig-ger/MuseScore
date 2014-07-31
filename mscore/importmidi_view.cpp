@@ -184,6 +184,9 @@ void TracksView::setModel(QAbstractItemModel *model)
       _frozenVTableView->setSelectionModel(selectionModel());
       _frozenCornerTableView->setSelectionModel(selectionModel());
 
+      connect(model, SIGNAL(layoutAboutToBeChanged()), SLOT(onModelAboutToBeChanged()));
+      connect(model, SIGNAL(layoutChanged()), SLOT(onModelChanged()));
+
       connect(_frozenVTableView->selectionModel(),
               SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)),
               SLOT(currentChanged(const QModelIndex &, const QModelIndex &)),
@@ -426,6 +429,19 @@ void TracksView::onVSectionMove(int /*logicalIndex*/, int oldVisualIndex, int ne
             _frozenVTableView->verticalHeader()->moveSection(oldVisualIndex, newVisualIndex);
             _frozenCornerTableView->verticalHeader()->moveSection(oldVisualIndex, newVisualIndex);
             }
+      }
+
+void TracksView::onModelAboutToBeChanged()
+      {
+      onModelChanged();
+      }
+
+void TracksView::onModelChanged()
+      {
+      setFrozenRowCount(0);
+      setFrozenColCount(0);
+      resetHHeader();
+      resetVHeader();
       }
 
 void TracksView::updateFocus(int currentRow, int currentColumn)
