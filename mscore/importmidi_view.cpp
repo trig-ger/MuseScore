@@ -1,5 +1,8 @@
 #include "importmidi_view.h"
+#include "importmidi_model.h"
 
+
+namespace Ms {
 
 class SizedHHeaderView : public QHeaderView
       {
@@ -23,16 +26,14 @@ class SizedHHeaderView : public QHeaderView
 
 TracksView::TracksView(QWidget *parent)
       : QTableView(parent)
-      , _frozenRowCount(0)
-      , _frozenColCount(0)
       {
       _frozenHTableView = new QTableView(this);
       _frozenVTableView = new QTableView(this);
       _frozenCornerTableView = new QTableView(this);
       _delegate = new SeparatorDelegate(this);
 
-      _delegate->setFrozenRowIndex(_frozenRowCount - 1);
-      _delegate->setFrozenColIndex(_frozenColCount - 1);
+      _delegate->setFrozenRowIndex(-1);
+      _delegate->setFrozenColIndex(-1);
 
       initHorizontalView();
       initVerticalView();
@@ -172,7 +173,7 @@ void TracksView::initConnections()
               verticalScrollBar(), SLOT(setValue(int)));
       }
 
-void TracksView::setModel(QAbstractItemModel *model)
+void TracksView::setModel(TracksModel *model)
       {
       QTableView::setModel(model);
 
@@ -184,6 +185,8 @@ void TracksView::setModel(QAbstractItemModel *model)
       _frozenVTableView->setSelectionModel(selectionModel());
       _frozenCornerTableView->setSelectionModel(selectionModel());
 
+      connect(model, SIGNAL(layoutChanged()), SLOT(updateFrozenRowCount()));
+      connect(model, SIGNAL(layoutChanged()), SLOT(updateFrozenColCount()));
       connect(_frozenVTableView->selectionModel(),
               SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)),
               SLOT(currentChanged(const QModelIndex &, const QModelIndex &)),
@@ -197,22 +200,21 @@ void TracksView::setModel(QAbstractItemModel *model)
               SLOT(currentChanged(const QModelIndex &, const QModelIndex &)),
               Qt::UniqueConnection);
 
-      setFrozenRowCount(_frozenRowCount);
-      setFrozenColCount(_frozenColCount);
-
       connect(_frozenVTableView->horizontalHeader(),SIGNAL(sectionResized(int,int,int)),
               this, SLOT(updateFrozenSectionWidth(int,int,int)), Qt::UniqueConnection);
       connect(_frozenHTableView->verticalHeader(),SIGNAL(sectionResized(int,int,int)),
               this, SLOT(updateFrozenSectionHeight(int,int,int)), Qt::UniqueConnection);
       }
 
-void TracksView::setFrozenRowCount(int count)
+void TracksView::updateFrozenRowCount()
       {
-      _frozenRowCount = count;
-      _delegate->setFrozenRowIndex(_frozenRowCount - 1);
+      const int count = static_cast<TracksModel *>(model())->frozenRowCount();
+      _delegate->setFrozenRowIndex(count - 1);
 
-      if (model()->rowCount() == 0)
+      if (model()->rowCount() == 0) {
+            updateFrozenTableGeometry();
             return;
+            }
 
       Q_ASSERT_X(count >= 0 && count < model()->rowCount(),
                  "TracksView::setFrozenRowCount", "Invalid frozen row count");
@@ -231,13 +233,15 @@ void TracksView::setFrozenRowCount(int count)
       updateFrozenTableGeometry();
       }
 
-void TracksView::setFrozenColCount(int count)
+void TracksView::updateFrozenColCount()
       {
-      _frozenColCount = count;
-      _delegate->setFrozenColIndex(_frozenColCount - 1);
+      const int count = static_cast<TracksModel *>(model())->frozenColCount();
+      _delegate->setFrozenColIndex(count - 1);
 
-      if (model()->columnCount() == 0)
+      if (model()->columnCount() == 0) {
+            updateFrozenTableGeometry();
             return;
+            }
 
       Q_ASSERT_X(count >= 0 && count < model()->columnCount(),
                  "TracksView::setFrozenColCount", "Invalid frozen column count");
@@ -316,7 +320,7 @@ void TracksView::resetVHeader()
 
 void TracksView::updateMainViewSectionWidth(int logicalIndex, int /*oldSize*/, int newSize)
       {
-      if (logicalIndex < _frozenColCount) {
+      if (logicalIndex < static_cast<TracksModel *>(model())->frozenColCount()) {
             _frozenVTableView->setColumnWidth(logicalIndex, newSize);
             _frozenCornerTableView->setColumnWidth(logicalIndex, newSize);
             }
@@ -326,7 +330,7 @@ void TracksView::updateMainViewSectionWidth(int logicalIndex, int /*oldSize*/, i
 
 void TracksView::updateMainViewSectionHeight(int logicalIndex, int /*oldSize*/, int newSize)
       {
-      if (logicalIndex < _frozenRowCount) {
+      if (logicalIndex < static_cast<TracksModel *>(model())->frozenRowCount()) {
             _frozenHTableView->setRowHeight(logicalIndex, newSize);
             _frozenCornerTableView->setRowHeight(logicalIndex, newSize);
             }
@@ -336,7 +340,7 @@ void TracksView::updateMainViewSectionHeight(int logicalIndex, int /*oldSize*/, 
 
 void TracksView::updateFrozenSectionWidth(int logicalIndex, int /*oldSize*/, int newSize)
       {
-      if (logicalIndex < _frozenColCount) {
+      if (logicalIndex < static_cast<TracksModel *>(model())->frozenColCount()) {
             setColumnWidth(logicalIndex, newSize);
             _frozenCornerTableView->setColumnWidth(logicalIndex, newSize);
             _frozenHTableView->setColumnWidth(logicalIndex, newSize);
@@ -346,7 +350,7 @@ void TracksView::updateFrozenSectionWidth(int logicalIndex, int /*oldSize*/, int
 
 void TracksView::updateFrozenSectionHeight(int logicalIndex, int /*oldSize*/, int newSize)
       {
-      if (logicalIndex < _frozenRowCount) {
+      if (logicalIndex < static_cast<TracksModel *>(model())->frozenRowCount()) {
             setRowHeight(logicalIndex, newSize);
             _frozenCornerTableView->setRowHeight(logicalIndex, newSize);
             _frozenVTableView->setRowHeight(logicalIndex, newSize);
@@ -404,10 +408,10 @@ void TracksView::currentChanged(const QModelIndex &current, const QModelIndex &p
 
 void TracksView::onHSectionMove(int /*logicalIndex*/, int oldVisualIndex, int newVisualIndex)
       {
-      if (newVisualIndex < _frozenColCount) {		// disallow move
-            horizontalHeader()->moveSection(newVisualIndex, oldVisualIndex);	// move back
+      if (newVisualIndex < static_cast<TracksModel *>(model())->frozenColCount()) {	// disallow movement
+            horizontalHeader()->moveSection(newVisualIndex, oldVisualIndex);        // move back
             }
-      else if (oldVisualIndex >= _frozenColCount) {
+      else if (oldVisualIndex >= static_cast<TracksModel *>(model())->frozenColCount()) {
             // move only if this slot was not called after previous move back
             _frozenHTableView->horizontalHeader()->moveSection(oldVisualIndex, newVisualIndex);
             _frozenVTableView->horizontalHeader()->moveSection(oldVisualIndex, newVisualIndex);
@@ -417,10 +421,10 @@ void TracksView::onHSectionMove(int /*logicalIndex*/, int oldVisualIndex, int ne
 
 void TracksView::onVSectionMove(int /*logicalIndex*/, int oldVisualIndex, int newVisualIndex)
       {
-      if (newVisualIndex < _frozenRowCount) {		// disallow move
-            verticalHeader()->moveSection(newVisualIndex, oldVisualIndex);		// move back
+      if (newVisualIndex < static_cast<TracksModel *>(model())->frozenRowCount()) { // disallow movement
+            verticalHeader()->moveSection(newVisualIndex, oldVisualIndex);          // move back
             }
-      else if (oldVisualIndex >= _frozenRowCount) {
+      else if (oldVisualIndex >= static_cast<TracksModel *>(model())->frozenRowCount()) {
             // move only if this slot was not called after previous move back
             _frozenHTableView->verticalHeader()->moveSection(oldVisualIndex, newVisualIndex);
             _frozenVTableView->verticalHeader()->moveSection(oldVisualIndex, newVisualIndex);
@@ -430,14 +434,14 @@ void TracksView::onVSectionMove(int /*logicalIndex*/, int oldVisualIndex, int ne
 
 void TracksView::updateFocus(int currentRow, int currentColumn)
       {
-      if (currentRow < _frozenRowCount) {
-            if (currentColumn < _frozenColCount)
+      if (currentRow < static_cast<TracksModel *>(model())->frozenRowCount()) {
+            if (currentColumn < static_cast<TracksModel *>(model())->frozenColCount())
                   _frozenCornerTableView->setFocus();
             else
                   _frozenHTableView->setFocus();
             }
       else {
-            if (currentColumn < _frozenColCount)
+            if (currentColumn < static_cast<TracksModel *>(model())->frozenColCount())
                   _frozenVTableView->setFocus();
             else
                   setFocus();
@@ -450,12 +454,14 @@ void TracksView::keepVisible(const QModelIndex &previous, const QModelIndex &cur
       const int hInvisibleGap = visualRect(current).topLeft().x() - frozenVTableWidth();
       const int vInvisibleGap = visualRect(current).topLeft().y() - frozenHTableHeight();
 
-      if (current.column() != previous.column() && current.column() >= _frozenColCount
+      if (current.column() != previous.column()
+                  && current.column() >= static_cast<TracksModel *>(model())->frozenColCount()
                   && hInvisibleGap < 0) {
             const int newValue = horizontalScrollBar()->value() + hInvisibleGap;
             horizontalScrollBar()->setValue(newValue);
             }
-      if (current.row() != previous.row() && current.row() >= _frozenRowCount
+      if (current.row() != previous.row()
+                  && current.row() >= static_cast<TracksModel *>(model())->frozenRowCount()
                   && vInvisibleGap < 0) {
             const int newValue = verticalScrollBar()->value() + vInvisibleGap;
             verticalScrollBar()->setValue(newValue);
@@ -482,7 +488,7 @@ void TracksView::keepVisible(const QModelIndex &previous, const QModelIndex &cur
 int TracksView::frozenRowHeight()
       {
       int height = 0;
-      for (int row = 0; row != _frozenRowCount; ++row)
+      for (int row = 0; row != static_cast<TracksModel *>(model())->frozenRowCount(); ++row)
             height += rowHeight(row);
       return height;
       }
@@ -490,7 +496,7 @@ int TracksView::frozenRowHeight()
 int TracksView::frozenColWidth()
       {
       int width = 0;
-      for (int col = 0; col != _frozenColCount; ++col)
+      for (int col = 0; col != static_cast<TracksModel *>(model())->frozenColCount(); ++col)
             width += columnWidth(col);
       return width;
       }
@@ -498,7 +504,7 @@ int TracksView::frozenColWidth()
 int TracksView::frozenVTableWidth()
       {
       int width = 0;
-      for (int col = 0; col != _frozenColCount; ++col)
+      for (int col = 0; col != static_cast<TracksModel *>(model())->frozenColCount(); ++col)
             width += _frozenVTableView->columnWidth(col);
       return width;
       }
@@ -506,7 +512,7 @@ int TracksView::frozenVTableWidth()
 int TracksView::frozenHTableHeight()
       {
       int height = 0;
-      for (int row = 0; row != _frozenRowCount; ++row)
+      for (int row = 0; row != static_cast<TracksModel *>(model())->frozenRowCount(); ++row)
             height += _frozenHTableView->rowHeight(row);
       return height;
       }
@@ -531,3 +537,5 @@ void TracksView::updateFrozenTableGeometry()
                         frozenColWidth(),
                         frozenRowHeight());
       }
+
+} // namespace Ms

@@ -4,6 +4,8 @@
 #include <QTableView>
 
 
+namespace Ms {
+
 class SeparatorDelegate : public QStyledItemDelegate
       {
    public:
@@ -45,6 +47,7 @@ class SeparatorDelegate : public QStyledItemDelegate
       int _frozenColIndex;
       };
 
+class TracksModel;
 
 class TracksView : public QTableView
       {
@@ -54,10 +57,8 @@ class TracksView : public QTableView
       TracksView(QWidget *parent);
       ~TracksView();
 
-      void setModel(QAbstractItemModel *model);
+      void setModel(TracksModel *model);
 
-      void setFrozenRowCount(int count);
-      void setFrozenColCount(int count);
       void setItemDelegate(SeparatorDelegate *delegate);
 
       void restoreHHeaderState(const QByteArray &data);
@@ -81,6 +82,8 @@ class TracksView : public QTableView
       void updateFrozenSectionHeight(int,int,int);
       void onHSectionMove(int,int,int);
       void onVSectionMove(int,int,int);
+      void updateFrozenRowCount();
+      void updateFrozenColCount();
 
    private:
       void initHorizontalView();
@@ -105,9 +108,9 @@ class TracksView : public QTableView
       QTableView *_frozenVTableView;
       QTableView *_frozenCornerTableView;
       SeparatorDelegate *_delegate;
-      int _frozenRowCount;
-      int _frozenColCount;
       };
+
+} // namespace Ms
 
 
 #endif // IMPORTMIDI_VIEW_H

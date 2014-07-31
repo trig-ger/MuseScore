@@ -624,6 +624,7 @@ void TracksModel::clear()
       _frozenColCount = 0;
       _trackOpers = MidiOperations::Opers();
       _columns.clear();
+      emit resetViews();
       endResetModel();
       }
 

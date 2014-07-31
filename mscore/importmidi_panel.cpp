@@ -51,8 +51,7 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
 
       if (opers.data()->processingsOfOpenedFile == 1) {     // initial processing of MIDI file
             ++opers.data()->processingsOfOpenedFile;
-            _model->clear();        // need to be called before resetTableViewState
-            resetTableViewState();
+            _model->clear();        // resetTableViewState will be called via a signal from _model
             _model->reset(opers.data()->trackOpers,
                           MidiLyrics::makeLyricsListForUI(),
                           opers.data()->trackCount,
@@ -71,8 +70,6 @@ void ImportMidiPanel::setMidiFile(const QString &fileName)
             restoreTableViewState();
             }
 
-      _ui->tracksView->setFrozenRowCount(_model->frozenRowCount());
-      _ui->tracksView->setFrozenColCount(_model->frozenColCount());
       _ui->comboBoxCharset->setCurrentText(preferences.midiImportOperations.data()->charset);
                   // tracks view has multiple headers (need for frozen rows/columns)
                   // so to set all headers special methods there have been implemented
@@ -103,8 +100,6 @@ void ImportMidiPanel::restoreTableViewState()
 
 void ImportMidiPanel::resetTableViewState()
       {
-      _ui->tracksView->setFrozenRowCount(0);
-      _ui->tracksView->setFrozenColCount(0);
       _ui->tracksView->resetHHeader();
       _ui->tracksView->resetVHeader();
       }
@@ -124,6 +119,7 @@ void ImportMidiPanel::setupUi()
       connect(_ui->pushButtonUp, SIGNAL(clicked()), SLOT(moveTrackUp()));
       connect(_ui->pushButtonDown, SIGNAL(clicked()), SLOT(moveTrackDown()));
       connect(_ui->toolButtonHideMidiPanel, SIGNAL(clicked()), SLOT(hidePanel()));
+      connect(_model, SIGNAL(resetViews()), SLOT(resetTableViewState()));
 
       _updateUiTimer->start(100);
       updateUi();

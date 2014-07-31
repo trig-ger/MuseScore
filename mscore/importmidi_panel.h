@@ -37,6 +37,7 @@ class ImportMidiPanel : public QWidget
       void applyMidiImport();
       void moveTrackUp();
       void moveTrackDown();
+      void resetTableViewState();
 
    private:
       void setupUi();
@@ -47,7 +48,6 @@ class ImportMidiPanel : public QWidget
       int currentVisualIndex() const;
       void saveTableViewState();
       void restoreTableViewState();
-      void resetTableViewState();
       void fillCharsetList();
 
       Ui::ImportMidiPanel *_ui;

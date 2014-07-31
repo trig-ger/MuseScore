@@ -10,6 +10,8 @@ namespace Ms {
 
 class TracksModel : public QAbstractTableModel
       {
+      Q_OBJECT
+
    public:
       TracksModel();
       ~TracksModel();
@@ -38,6 +40,9 @@ class TracksModel : public QAbstractTableModel
       Qt::ItemFlags flags(const QModelIndex &index) const;
       QVariant headerData(int section, Qt::Orientation orientation, int role) const;
       bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
+
+  signals:
+      void resetViews();
 
   private:
       bool isTrackIndexValid(int trackIndex) const;
