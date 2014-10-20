@@ -60,6 +60,7 @@
 #include "importmidi_voice.h"
 #include "importmidi_operations.h"
 #include "importmidi_key.h"
+#include "importmidi_ornament.h"
 
 #include <set>
 
@@ -587,6 +588,7 @@ void MTrack::convertTrack(const ReducedFraction &lastTick)
                  "Tuplet has less than 2 elements or all elements are rests");
 
       MidiClef::createClefs(staff, indexOfOperation, mtrack->drumTrack());
+      MidiOrnament::detectTremolo(staff, indexOfOperation, mtrack->drumTrack());
       }
 
 Fraction metaTimeSignature(const MidiEvent& e)
