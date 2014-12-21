@@ -11,6 +11,7 @@ namespace LRHand {
 
 bool needToSplit(const std::multimap<ReducedFraction, MidiChord> &chords, int midiProgram);
 void splitIntoLeftRightHands(std::multimap<int, MTrack> &tracks);
+void reorderGrandStaff(std::multimap<int, MTrack> &tracks);
 
 } // namespace LRHand
 } // namespace Ms

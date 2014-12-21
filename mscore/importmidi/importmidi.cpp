@@ -1039,6 +1039,7 @@ void convertMidi(Score *score, const MidiFile *mf)
                  "convertMidi", "There are overlapping notes of the same voice that is incorrect");
 
       LRHand::splitIntoLeftRightHands(tracks);
+      LRHand::reorderGrandStaff(tracks);
       quantizeAllTracks(tracks, sigmap, lastTick);
       MChord::removeOverlappingNotes(tracks);
 
