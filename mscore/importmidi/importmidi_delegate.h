@@ -82,6 +82,9 @@ class OperationsDelegate : public SeparatorDelegate
       void setModelData(QWidget *editor, QAbstractItemModel *model,
                         const QModelIndex &index) const;
 
+   signals:
+      void mouseOverRow(int) const;
+
    private slots:
       void commitAndCloseEditor();
 

@@ -38,6 +38,7 @@ class ImportMidiPanel : public QWidget
       void moveTrackUp();
       void moveTrackDown();
       void cancelChanges();
+      void onMouseOverRow(int);
 
    private:
       void setupUi();

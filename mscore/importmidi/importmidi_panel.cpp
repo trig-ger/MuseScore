@@ -7,6 +7,9 @@
 #include "importmidi_inner.h"
 #include "mscore/preferences.h"
 #include "musescore.h"
+#include "libmscore/score.h"
+#include "libmscore/staff.h"
+#include "libmscore/barline.h"
 
 
 namespace Ms {
@@ -129,6 +132,7 @@ void ImportMidiPanel::setupUi()
       connect(_ui->pushButtonUp, SIGNAL(clicked()), SLOT(moveTrackUp()));
       connect(_ui->pushButtonDown, SIGNAL(clicked()), SLOT(moveTrackDown()));
       connect(_ui->toolButtonHideMidiPanel, SIGNAL(clicked()), SLOT(hidePanel()));
+      connect(_delegate, SIGNAL(mouseOverRow(int)), SLOT(onMouseOverRow(int)));
 
       _updateUiTimer->start(100);
       updateUi();
@@ -166,6 +170,23 @@ void ImportMidiPanel::updateUi()
       const int visualIndex = currentVisualIndex();
       _ui->pushButtonUp->setEnabled(canMoveTrackUp(visualIndex));
       _ui->pushButtonDown->setEnabled(canMoveTrackDown(visualIndex));
+      }
+
+void ImportMidiPanel::onMouseOverRow(int row)
+      {
+      const int trackIndex = _model->trackIndexFromRow(row);
+      if (trackIndex == -1) {       // all tracks
+//            Score *score = mscore->currentScore();
+
+//            for (Segment *seg = score->firstSegment(Segment::Type::EndBarLine);
+//                          seg; seg = seg->next(Segment::Type::EndBarLine)) {
+//                  BarLine *bl = static_cast<BarLine *>(seg->element(0));
+//                  bl->setColor(QColor(255, 153, 0));
+//                  }
+            }
+      else {
+
+            }
       }
 
 void ImportMidiPanel::hidePanel()

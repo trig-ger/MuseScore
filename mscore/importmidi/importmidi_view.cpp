@@ -381,7 +381,7 @@ bool TracksView::viewportEvent(QEvent *event)
             }
 
       return QTableView::viewportEvent(event);
-}
+      }
 
 void TracksView::wheelEvent(QWheelEvent *event)
       {

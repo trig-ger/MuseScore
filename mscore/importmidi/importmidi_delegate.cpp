@@ -283,6 +283,9 @@ void OperationsDelegate::paint(QPainter *painter,
             if (list.size() > 1)
                   drawArrow(painter, option, index);
             }
+
+      if (option.state & QStyle::State_MouseOver && index.isValid())
+            emit mouseOverRow(index.row());
       }
 
 void OperationsDelegate::drawArrow(
