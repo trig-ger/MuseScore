@@ -1019,6 +1019,26 @@ ReducedFraction findFirstChordTick(const QList<MTrack> &tracks)
       return minTick;
       }
 
+// to link score staff and track in the MIDI import panel
+
+void setTrackIndexOfStaffs(QList<MTrack> &trackList)
+      {
+      for (MTrack &track: trackList) {
+
+            Q_ASSERT(track.indexOfOperation >= 0);
+
+            track.staff->setProperty("midi_import_track_index", track.indexOfOperation);
+
+            const QVariant prp = track.staff->property("midi_import_track_index");
+            if (prp.isValid()) {
+                  bool ok;
+                  const int trackIndex = prp.toInt(&ok);
+                  if (ok)
+                        qDebug() << trackIndex;
+                  }
+            }
+      }
+
 void convertMidi(Score *score, const MidiFile *mf)
       {
       ReducedFraction lastTick;
@@ -1101,6 +1121,7 @@ void convertMidi(Score *score, const MidiFile *mf)
       MidiTempo::setTempo(tracks, score);
       MidiKey::setMainKeySig(trackList);
       MidiChordName::setChordNames(trackList);
+      setTrackIndexOfStaffs(trackList);
       }
 
 void loadMidiData(MidiFile &mf)
