@@ -8,6 +8,8 @@
 #include "mscore/preferences.h"
 #include "musescore.h"
 #include "libmscore/score.h"
+#include "libmscore/measure.h"
+#include "mscore/scoreview.h"
 
 
 namespace Ms {
@@ -189,6 +191,61 @@ void ImportMidiPanel::setReorderedIndexes()
             }
       }
 
+static int findFirstVisibleMeasure()
+      {
+      int measureIndex = 0;
+      const Score* cs = mscore->currentScore();
+      const ScoreView* cv = mscore->currentScoreView();
+      const QRectF view = cv->toLogical(QRect(0.0, 0.0, mscore->width(), mscore->height()));
+      const Measure* m = cs->firstMeasure();
+
+      while (m && !view.intersects(m->canvasBoundingRect()))
+            m = m->nextMeasure();
+
+      if (m && m != cs->firstMeasure()) {
+            measureIndex = m->no();
+                  // if the measure rect intersection width with the current view is less than
+                  // the rect intersection width with the current view of the some next measure
+                  // and the measure rect intersection width is less than 2/3 of the rect width
+                  // then pick the next measure
+            const QRectF mRect = m->canvasBoundingRect();
+            const double mIntersectedW = view.intersected(mRect).width();
+
+            if (mIntersectedW < mRect.width() * 2.0 / 3.0) {
+                  double maxW = mIntersectedW;
+                  const Measure* nextM = nullptr;
+                              // check all measures because systems can wrap on the page
+                  for (m = m->nextMeasure(); m; m = m->nextMeasure()) {
+                        const QRectF nextMRect = m->canvasBoundingRect();
+                        const double w = view.intersected(nextMRect).width();
+                        if (w > maxW) {
+                              maxW = w;
+                              nextM = m;
+                              }
+                        }
+                  if (nextM && maxW > mIntersectedW)
+                        measureIndex = nextM->no();
+                  }
+            }
+
+      return measureIndex;
+      }
+
+static void setViewToMeasure(int measureIndex)
+      {
+      if (measureIndex <= 0)
+            return;
+
+      ScoreView* cv = mscore->currentScoreView();
+      Score* cs = mscore->currentScore();
+
+      Measure* m = cs->firstMeasure();
+      while (m && m->no() < measureIndex)
+            m = m->nextMeasure();
+      if (m)
+            cv->adjustCanvasPosition(m, false);
+      }
+
 void ImportMidiPanel::applyMidiImport()
       {
       if (!canImportMidi())
@@ -211,7 +268,10 @@ void ImportMidiPanel::applyMidiImport()
             // prevent from showing save request dialog on every 'apply MIDI import' call
       mscore->currentScore()->setCreated(false);
 
+      const int measureIndex = findFirstVisibleMeasure();
       mscore->openScore(_midiFile);
+      setViewToMeasure(measureIndex);
+
       saveTableViewState();
       _importInProgress = false;
       }
