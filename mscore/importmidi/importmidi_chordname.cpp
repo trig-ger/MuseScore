@@ -205,5 +205,90 @@ void setChordNames(QList<MTrack> &tracks)
             }
       }
 
+
+
+class ChordNameSegment
+      {
+   public:
+      ChordNameSegment(const std::multimap<ReducedFraction, MidiChord>::const_iterator &start,
+                       const std::multimap<ReducedFraction, MidiChord>::const_iterator &end)
+            : start_(start)
+            , end_(end)
+            {}
+
+      bool operator<(const ChordNameSegment &other) const
+            {
+            return start_->first < other.start_->first;
+            }
+      std::multimap<ReducedFraction, MidiChord>::const_iterator start() const { return start_; }
+      std::multimap<ReducedFraction, MidiChord>::const_iterator end() const { return end_; }
+
+   private:
+      std::multimap<ReducedFraction, MidiChord>::const_iterator start_;
+      std::multimap<ReducedFraction, MidiChord>::const_iterator end_;
+      };
+
+class ChordName
+      {
+   public:
+      enum class ChordType
+            {
+            MAJOR_TRIAD,
+            MINOR_TRIAD,
+            DIMINISHED_TRIAD
+            };
+
+      ChordName(int tonic, ChordType chordType) : tonic_(tonic), type_(chordType) {}
+
+   private:
+      int tonic_;        // pitch class number: 0-11
+      ChordType type_;
+      };
+
+std::set<int> chordTypeToTemplate(ChordName::ChordType chordType)
+      {
+      switch (chordType) {
+            case ChordName::ChordType::MAJOR_TRIAD:
+                  return std::set<int>{0, 4, 7};
+                  break;
+            case ChordName::ChordType::MINOR_TRIAD:
+                  return std::set<int>{0, 3, 7};
+                  break;
+            case ChordName::ChordType::DIMINISHED_TRIAD:
+                  return std::set<int>{0, 3, 6};
+                  break;
+            }
+      return std::set<int>();
+      }
+
+std::set<int> chordTypeToTpcSet(const MidiChord &chord)
+      {
+      std::set<int> tpcSet;
+      for (const MidiNote& note: chord.notes)
+            tpcSet.insert(note.pitch % 12);
+      return tpcSet;
+      }
+
+void recognizeChordNames(const std::multimap<ReducedFraction, MidiChord> &allChords)
+      {
+      if (allChords.empty())
+            return;
+
+      std::set<ChordNameSegment> segments;
+
+      for (auto it = allChords.begin(); it != allChords.end(); ++it) {
+            if (it->second.notes.size() >= 3)
+                  segments.insert(ChordNameSegment(it, std::next(it)));
+            }
+
+      for (auto it = segments.begin(); it != segments.end(); ++it) {
+            const auto nextSeg = std::next(it);
+            // between segments there are chords that do not belong to any segment,
+            //  so put these chords into a new segment
+            if (it->end() != nextSeg->start())
+                  it = segments.insert(ChordNameSegment(it->end(), nextSeg->start())).first;
+            }
+      }
+
 } // namespace MidiChordName
 } // namespace Ms
