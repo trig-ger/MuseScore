@@ -210,20 +210,21 @@ static int findFirstVisibleMeasure()
                   // then pick the next measure
             const QRectF mRect = m->canvasBoundingRect();
             const double mIntersectedW = view.intersected(mRect).width();
+            const double mFrac = mIntersectedW / mRect.width();
 
-            if (mIntersectedW < mRect.width() * 2.0 / 3.0) {
-                  double maxW = mIntersectedW;
+            if (mFrac < 2.0 / 3.0) {
+                  double maxWidthFrac = mFrac;
                   const Measure* nextM = nullptr;
                               // check all measures because systems can wrap on the page
                   for (m = m->nextMeasure(); m; m = m->nextMeasure()) {
                         const QRectF nextMRect = m->canvasBoundingRect();
                         const double w = view.intersected(nextMRect).width();
-                        if (w > maxW) {
-                              maxW = w;
+                        if (w / nextMRect.width() > maxWidthFrac) {
+                              maxWidthFrac = w / nextMRect.width();
                               nextM = m;
                               }
                         }
-                  if (nextM && maxW > mIntersectedW)
+                  if (nextM && maxWidthFrac > mFrac)
                         measureIndex = nextM->no();
                   }
             }
