@@ -205,7 +205,150 @@ void setChordNames(QList<MTrack> &tracks)
             }
       }
 
+// key profile score of all matches, see
+//   D. Temperley - The Cognition of Basic Musical Structures (2001)
+// pitchDistance - distance from tonic
 
+double keyProfileScore(int pitchDistance)
+      {
+      static const std::vector<double> scores = {
+         //  C   C#    D   Eb    E    F   F#    G   Ab    A   Bb    B
+            5.0, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 4.5, 2.0, 3.5, 1.5, 4.0
+      };
+
+      Q_ASSERT(pitchDistance >= 0 && pitchDistance < (int)scores.size());
+
+      return scores[pitchDistance];
+      }
+
+struct TemplateMatch
+      {
+      // count of notes that match template elements
+      size_t matched = 0;
+
+      // accumulated key profile score (according to Temperley) of all matches, see
+      //   D. Temperley - The Cognition of Basic Musical Structures (2001)
+      double keyProfileSumScore = 0.0;
+
+      // count of notes that do not match template elements but fit into diatonic scale
+      //   of the template tonality
+      size_t notMatchedFitScale = 0;
+
+      // count of notes that match neither template elements nor diatonic scale
+      //   of the template tonality
+      size_t notMatchedCompletely = 0;
+
+      // count of template elements that do not match any note
+      size_t notMatchedTemplElems = 0;
+      };
+
+class ChordTemplate
+      {
+   public:
+      ChordTemplate(const QString &name, const std::set<int> &pitches)
+            : name_(name)
+            , pitches_(pitches)
+            {
+            }
+
+      QString name() const { return name_; }
+
+      bool hasPitch(int pitch) const
+            {
+            return pitches_.find(pitch % 12) != pitches_.end();
+            }
+   private:
+      QString name_;
+      std::set<int> pitches_;
+      };
+
+TemplateMatch findTemplateMatch(const MidiChord &chord, const ChordTemplate &templ)
+      {
+      TemplateMatch match;
+
+      for (const MidiNote &note: chord.notes) {
+            if (templ.hasPitch(note.pitch))
+                  ++match.matched;
+            }
+
+      return match;
+      }
+
+
+struct TemplateScore
+      {
+      size_t templateIndex;
+      double score;
+      };
+
+class ChordData
+      {
+   public:
+      ChordData(const std::multimap<ReducedFraction, MidiChord>::const_iterator &chordIter)
+            : chordIter_(chordIter)
+            {
+            findSuitableTemplates();
+            }
+
+   private:
+      void findSuitableTemplates()
+            {
+            const auto &notes = chordIter_->second.notes;
+
+            }
+
+      std::multimap<ReducedFraction, MidiChord>::const_iterator chordIter_;
+      std::vector<TemplateScore> templates_;
+      };
+
+class ChordNameSegment
+      {
+   public:
+      ChordNameSegment(size_t startDataIndex, size_t endDataIndex)
+            : startDataIndex_(startDataIndex), endDataIndex_(endDataIndex)
+      {}
+
+      size_t startDataIndex() const { return startDataIndex_; }
+      size_t endDataIndex() const { return endDataIndex_; }
+
+   private:
+      size_t startDataIndex_;
+      size_t endDataIndex_;
+      };
+
+
+void ff(const std::multimap<ReducedFraction, MidiChord> &allChords)
+      {
+      if (allChords.empty())
+            return;
+
+      std::vector<ChordData> chordsData;
+      std::list<ChordNameSegment> segments;
+
+      for (auto it = allChords.begin(); it != allChords.end(); ++it) {
+            chordsData.push_back(ChordData(it));
+            if (it->second.notes.size() >= 3)
+                  segments.push_back(ChordNameSegment(chordsData.size() - 1, chordsData.size()));
+            }
+
+      for (auto it = segments.begin(); it != segments.end(); ++it) {
+            const auto nextSeg = std::next(it);
+
+            // if between segments there are chords that do not belong to any segment,
+            //  put these chords into a new segment
+            if (it->endDataIndex() != nextSeg->startDataIndex()) {
+                  it = segments.insert(nextSeg, ChordNameSegment(it->endDataIndex(),
+                                                                 nextSeg->startDataIndex()));
+                  }
+            }
+      }
+
+
+
+
+
+
+/*
 
 class ChordNameSegment
       {
@@ -289,6 +432,8 @@ void recognizeChordNames(const std::multimap<ReducedFraction, MidiChord> &allCho
                   it = segments.insert(ChordNameSegment(it->end(), nextSeg->start())).first;
             }
       }
+
+*/
 
 } // namespace MidiChordName
 } // namespace Ms
