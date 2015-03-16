@@ -221,25 +221,55 @@ double keyProfileScore(int pitchDistance)
       return scores[pitchDistance];
       }
 
-struct TemplateMatch
+
+void fe(const TemplateMatch &first, const TemplateMatch &second)
       {
-      // count of notes that match template elements
+      if (allTemplateElementsMatch(first) && !allTemplateElementsMatch(second))
+            return true;
+      else if (!allTemplateElementsMatch(first) && allTemplateElementsMatch(second))
+            return false;
+      else if (allTemplateElementsMatch(first) && allTemplateElementsMatch(second)) {
+            if (tonicMatches(first) > tonicMatches(second))
+                  return true;
+            if (tonicMatches(first < tonicMatches(second)))
+                  return false;
+            return (averageTemplateElementMatches(first) >= averageTemplateElementMatches(second));
+            }
+
+      }
+
+
+class TemplateMatch
+      {
+   public:
+      bool operator<(const TemplateMatch &other) const
+            {
+
+            }
+   private:
+
+
+
+      // number of notes that match template elements
       size_t matched = 0;
 
       // accumulated key profile score (according to Temperley) of all matches, see
       //   D. Temperley - The Cognition of Basic Musical Structures (2001)
       double keyProfileSumScore = 0.0;
 
-      // count of notes that do not match template elements but fit into diatonic scale
+      // number of notes that do not match template elements but fit into diatonic scale
       //   of the template tonality
       size_t notMatchedFitScale = 0;
 
-      // count of notes that match neither template elements nor diatonic scale
+      // number of notes that match neither template elements nor diatonic scale
       //   of the template tonality
       size_t notMatchedCompletely = 0;
 
-      // count of template elements that do not match any note
+      // number of template elements that do not match any note
       size_t notMatchedTemplElems = 0;
+
+      size_t matchedTonic = 0;
+      size_t matchedNonTonic = 0;
       };
 
 class ChordTemplate
