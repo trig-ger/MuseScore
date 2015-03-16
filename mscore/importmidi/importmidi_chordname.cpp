@@ -222,20 +222,24 @@ double keyProfileScore(int pitchDistance)
       }
 
 
-void fe(const TemplateMatch &first, const TemplateMatch &second)
+bool isLess(const TemplateMatch &first, const TemplateMatch &second)
       {
       if (allTemplateElementsMatch(first) && !allTemplateElementsMatch(second))
             return true;
-      else if (!allTemplateElementsMatch(first) && allTemplateElementsMatch(second))
+      if (!allTemplateElementsMatch(first) && allTemplateElementsMatch(second))
             return false;
-      else if (allTemplateElementsMatch(first) && allTemplateElementsMatch(second)) {
-            if (tonicMatches(first) > tonicMatches(second))
-                  return true;
-            if (tonicMatches(first < tonicMatches(second)))
-                  return false;
-            return (averageTemplateElementMatches(first) >= averageTemplateElementMatches(second));
+      if (allTemplateElementsMatch(first) && allTemplateElementsMatch(second)) {
+            if (tonicMatchCount(first) != tonicMatchCount(second))
+                  return tonicMatchCount(first) > tonicMatchCount(second);
+            return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
             }
 
+      // !allTemplateElementsMatch(first) && !allTemplateElementsMatch(second)
+      if (matchElementPercent(first) != matchElementPercent(second))
+            return matchElementPercent(first) > matchElementPercent(second);
+      if (tonicMatchCount(first) != tonicMatchCount(second))
+            return tonicMatchCount(first) > tonicMatchCount(second);
+      return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
       }
 
 
