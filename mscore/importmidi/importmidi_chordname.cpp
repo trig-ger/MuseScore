@@ -253,41 +253,28 @@ bool isLess(const TemplateMatch &first, const TemplateMatch &second)
             return notMatchedNotes(first) < notMatchedNotes(second);
                   // number of notes that do not match any template element
                   // and belong to the template tonality scale
-      return notMatchedScaleNotes(first) > notMatchedScaleNotes(second);
+      if (notMatchedScaleNotes(first) != notMatchedScaleNotes(second))
+            return notMatchedScaleNotes(first) > notMatchedScaleNotes(second);
+                  // approximate popularity of use
+      return popularity(first) > popularity(second);
       }
 
 
 class TemplateMatch
       {
    public:
+      TemplateMatch(const ChordTemplate &templ, const QList<MidiNote> &notes)
+            {
+
+            }
+
       bool operator<(const TemplateMatch &other) const
             {
 
             }
    private:
 
-
-
-      // number of notes that match template elements
-      size_t matched = 0;
-
-      // accumulated key profile score (according to Temperley) of all matches, see
-      //   D. Temperley - The Cognition of Basic Musical Structures (2001)
-      double keyProfileSumScore = 0.0;
-
-      // number of notes that do not match template elements but fit into diatonic scale
-      //   of the template tonality
-      size_t notMatchedFitScale = 0;
-
-      // number of notes that match neither template elements nor diatonic scale
-      //   of the template tonality
-      size_t notMatchedCompletely = 0;
-
-      // number of template elements that do not match any note
-      size_t notMatchedTemplElems = 0;
-
-      size_t matchedTonic = 0;
-      size_t matchedNonTonic = 0;
+      size_t allTemplateElementsMatch_;
       };
 
 class ChordTemplate
@@ -308,6 +295,10 @@ class ChordTemplate
    private:
       QString name_;
       std::set<int> pitches_;
+            // approximate popularity of use in sample corpus
+            // according to Pardo, B., & Birmingham, W. P. (2002).
+            // Algorithms for Chordal Analysis. Computer Music Journal, Vol. 26, p. 27–49
+      double popularity_;
       };
 
 TemplateMatch findTemplateMatch(const MidiChord &chord, const ChordTemplate &templ)
