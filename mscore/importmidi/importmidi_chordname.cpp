@@ -224,22 +224,36 @@ double keyProfileScore(int pitchDistance)
 
 bool isLess(const TemplateMatch &first, const TemplateMatch &second)
       {
+                  // number of matched template elements
       if (allTemplateElementsMatch(first) && !allTemplateElementsMatch(second))
             return true;
       if (!allTemplateElementsMatch(first) && allTemplateElementsMatch(second))
             return false;
       if (allTemplateElementsMatch(first) && allTemplateElementsMatch(second)) {
+                        // number of notes that matched tonic
             if (tonicMatchCount(first) != tonicMatchCount(second))
                   return tonicMatchCount(first) > tonicMatchCount(second);
+                        // average number of notes per template element
             return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
             }
 
-      // !allTemplateElementsMatch(first) && !allTemplateElementsMatch(second)
-      if (matchElementPercent(first) != matchElementPercent(second))
-            return matchElementPercent(first) > matchElementPercent(second);
+      // the case !allTemplateElementsMatch(first) && !allTemplateElementsMatch(second)
+                  // fraction of matched template elements of the total number of elements
+      if (matchElementFraction(first) != matchElementFraction(second))
+            return matchElementFraction(first) > matchElementFraction(second);
+                  // number of notes that matched tonic
       if (tonicMatchCount(first) != tonicMatchCount(second))
             return tonicMatchCount(first) > tonicMatchCount(second);
-      return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
+                  // average number of notes per template element
+      if (averageTemplateElementMatches(first) != averageTemplateElementMatches(second))
+            return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
+
+                  // number of notes that do not match any template element
+      if (notMatchedNotes(first) != notMatchedNotes(second))
+            return notMatchedNotes(first) < notMatchedNotes(second);
+                  // number of notes that do not match any template element
+                  // and belong to the template tonality scale
+      return notMatchedScaleNotes(first) > notMatchedScaleNotes(second);
       }
 
 
