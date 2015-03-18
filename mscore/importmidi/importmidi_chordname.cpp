@@ -287,6 +287,7 @@ class ChordTemplate
             }
 
       QString name() const { return name_; }
+      const std::set<int>& pitches() const { return pitches_; }
 
       bool hasPitch(int pitch) const
             {
