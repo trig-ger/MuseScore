@@ -233,7 +233,7 @@ bool isLess(const TemplateMatch &first, const TemplateMatch &second)
                         // number of notes that matched tonic
             if (tonicMatchCount(first) != tonicMatchCount(second))
                   return tonicMatchCount(first) > tonicMatchCount(second);
-                        // average number of notes per template element
+                        // average number of matched notes per template element
             return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
             }
 
@@ -244,7 +244,7 @@ bool isLess(const TemplateMatch &first, const TemplateMatch &second)
                   // number of notes that matched tonic
       if (tonicMatchCount(first) != tonicMatchCount(second))
             return tonicMatchCount(first) > tonicMatchCount(second);
-                  // average number of notes per template element
+                  // average number of matched notes per template element
       if (averageTemplateElementMatches(first) != averageTemplateElementMatches(second))
             return (averageTemplateElementMatches(first) > averageTemplateElementMatches(second));
 
@@ -265,16 +265,85 @@ class TemplateMatch
    public:
       TemplateMatch(const ChordTemplate &templ, const QList<MidiNote> &notes)
             {
+            for (const MidiNote &note: notes) {
+                  if (templ.hasPitch(note.pitch))
+                        ++matches_[ChordTemplate::toTemplatePitch(note.pitch)];
+                  }
 
+            templateElementCount_ = templ.pitchCount();
+            noteCount_ = notes.size();
+            popularity_ = templ.popularity();
+
+            Q_ASSERT(!matches_.empty());
+            Q_ASSERT(matchedNoteCount() <= noteCount_);
             }
 
       bool operator<(const TemplateMatch &other) const
             {
+            if (doAllElementsMatch() && !other.doAllElementsMatch())
+                  return true;
+            if (!doAllElementsMatch() && other.doAllElementsMatch())
+                  return false;
+            if (doAllElementsMatch() && other.doAllElementsMatch()) {
+                  if (tonicMatchCount() != other.tonicMatchCount())
+                        return tonicMatchCount() > other.tonicMatchCount();
+                  return averageElementMatches() > other.averageElementMatches();
+                  }
 
+            if (matchedElementsFraction() != other.matchedElementsFraction())
+                  return matchedElementsFraction() > other.matchedElementsFraction();
+            if (tonicMatchCount() != other.tonicMatchCount())
+                  return tonicMatchCount() > other.tonicMatchCount();
+            if (averageElementMatches() != other.averageElementMatches())
+                  return averageElementMatches() > other.averageElementMatches();
+            if (notMatchedNotes() != other.notMatchedNotes())
+                  return notMatchedNotes() < other.notMatchedNotes();
+            if (notMatchedScaleNotes() != other.notMatchedScaleNotes())
+                  return notMatchedScaleNotes() > other.notMatchedScaleNotes();
+
+            return popularity_ > other.popularity_;
             }
    private:
+      bool doAllElementsMatch() const     // template elements
+            {
+            return matches_.size() == templateElementCount_;
+            }
+      size_t tonicMatchCount() const      // number of notes that match tonic
+            {
+            return matches_.begin()->second;
+            }
+      size_t matchedNoteCount() const
+            {
+            size_t matched = 0;
+            for (const auto &match: matches_)
+                  matched += match.second;
+            return matched;
+            }
+                  // average number of matched notes per template element
+      double averageElementMatches() const
+            {
+            return matchedNoteCount() / (double)matches_.size();
+            }
+      double matchedElementsFraction() const    // fraction of matched template elements
+            {
+            return matches_.size() / (double)templateElementCount_;
+            }
+                  // number of notes that do not match any template element
+      size_t notMatchedNotes() const
+            {
+            return noteCount_ - matchedNoteCount();
+            }
+                  // number of notes that do not match any template element
+                  // and belong to the template tonality scale
+      size_t notMatchedScaleNotes() const
+            {
 
-      size_t allTemplateElementsMatch_;
+            }
+
+      std::map<int, size_t> matches_;     // <template pitch, matched note count>
+      size_t templateElementCount_;
+      size_t noteCount_;
+      double popularity_;                 // approximate popularity in music
       };
 
 class ChordTemplate
@@ -287,12 +356,16 @@ class ChordTemplate
             }
 
       QString name() const { return name_; }
+      size_t pitchCount() const { return pitches_.size(); }
+      double popularity() const { return popularity_; }
       const std::set<int>& pitches() const { return pitches_; }
 
       bool hasPitch(int pitch) const
             {
-            return pitches_.find(pitch % 12) != pitches_.end();
+            return pitches_.find(toTemplatePitch(pitch)) != pitches_.end();
             }
+      static int toTemplatePitch(int pitch) { return pitch % 12; }
+
    private:
       QString name_;
       std::set<int> pitches_;
