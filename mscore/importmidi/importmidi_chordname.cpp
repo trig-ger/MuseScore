@@ -266,11 +266,12 @@ class TemplateMatch
       TemplateMatch(const ChordTemplate &templ, const QList<MidiNote> &notes)
             {
             for (const MidiNote &note: notes) {
-                  if (templ.hasPitch(note.pitch))
+                  if (templ.hasTemplatePitch(note.pitch))
                         ++matches_[ChordTemplate::toTemplatePitch(note.pitch)];
                   }
 
             templateElementCount_ = templ.pitchCount();
+            tonicPitches_ = templ.tonicPitches();
             noteCount_ = notes.size();
             popularity_ = templ.popularity();
 
@@ -285,15 +286,15 @@ class TemplateMatch
             if (!doAllElementsMatch() && other.doAllElementsMatch())
                   return false;
             if (doAllElementsMatch() && other.doAllElementsMatch()) {
-                  if (tonicMatchCount() != other.tonicMatchCount())
-                        return tonicMatchCount() > other.tonicMatchCount();
+                  if (averageTonicMatches() != other.averageTonicMatches())
+                        return averageTonicMatches() > other.averageTonicMatches();
                   return averageElementMatches() > other.averageElementMatches();
                   }
 
             if (matchedElementsFraction() != other.matchedElementsFraction())
                   return matchedElementsFraction() > other.matchedElementsFraction();
-            if (tonicMatchCount() != other.tonicMatchCount())
-                  return tonicMatchCount() > other.tonicMatchCount();
+            if (averageTonicMatches() != other.averageTonicMatches())
+                  return averageTonicMatches() > other.averageTonicMatches();
             if (averageElementMatches() != other.averageElementMatches())
                   return averageElementMatches() > other.averageElementMatches();
             if (notMatchedNotes() != other.notMatchedNotes())
@@ -308,9 +309,14 @@ class TemplateMatch
             {
             return matches_.size() == templateElementCount_;
             }
-      size_t tonicMatchCount() const      // number of notes that match tonic
+                  // average number of matched notes per each template tonic
+      double averageTonicMatches() const
             {
             return matches_.begin()->second;
+            }
+      bool isTonic() const
+            {
+            return
             }
       size_t matchedNoteCount() const
             {
@@ -343,6 +349,7 @@ class TemplateMatch
       std::map<int, size_t> matches_;     // <template pitch, matched note count>
       size_t templateElementCount_;
       size_t noteCount_;
+      std::set<int> tonicPitches_;
       double popularity_;                 // approximate popularity in music
       };
 
@@ -351,24 +358,36 @@ class ChordTemplate
    public:
       ChordTemplate(const QString &name, const std::set<int> &pitches)
             : name_(name)
-            , pitches_(pitches)
+            , templatePitches_(pitches)
             {
             }
 
       QString name() const { return name_; }
-      size_t pitchCount() const { return pitches_.size(); }
+      size_t pitchCount() const { return templatePitches_.size(); }
       double popularity() const { return popularity_; }
-      const std::set<int>& pitches() const { return pitches_; }
-
-      bool hasPitch(int pitch) const
-            {
-            return pitches_.find(toTemplatePitch(pitch)) != pitches_.end();
-            }
       static int toTemplatePitch(int pitch) { return pitch % 12; }
+
+      bool hasTemplatePitch(int templatePitch) const
+            {
+            return templatePitches_.find(toTemplatePitch(templatePitch))
+                        != templatePitches_.end();
+            }
+      bool hasScalePitch(int scalePitch) const
+            {
+            return scalePitches_.find(toTemplatePitch(scalePitch))
+                        != scalePitches_.end();
+            }
+      bool hasTonicPitch(int tonicPitch) const
+            {
+            return tonicPitches_.find(toTemplatePitch(tonicPitch))
+                        != tonicPitches_.end();
+            }
 
    private:
       QString name_;
-      std::set<int> pitches_;
+      std::set<int> templatePitches_;
+      std::set<int> scalePitches_;
+      std::set<int> tonicPitches_;  // diminished triad chords have 4 tonics
             // approximate popularity of use in sample corpus
             // according to Pardo, B., & Birmingham, W. P. (2002).
             // Algorithms for Chordal Analysis. Computer Music Journal, Vol. 26, p. 27–49
@@ -380,7 +399,7 @@ TemplateMatch findTemplateMatch(const MidiChord &chord, const ChordTemplate &tem
       TemplateMatch match;
 
       for (const MidiNote &note: chord.notes) {
-            if (templ.hasPitch(note.pitch))
+            if (templ.hasTemplatePitch(note.pitch))
                   ++match.matched;
             }
 
