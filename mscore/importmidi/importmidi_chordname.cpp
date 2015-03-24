@@ -222,6 +222,20 @@ double keyProfileScore(int pitchDistance)
       }
 
 
+
+const std::set<int> majorScalePitches()
+      {
+      static const std::set<int> majorScale = {0, 2, 4, 5, 7, 9, 11};
+      return majorScale;
+      }
+
+const std::set<int> minorScalePitches()
+      {
+      static const std::set<int> minorScale = {0, 2, 3, 5, 7, 8, 10};
+      return minorScale;
+      }
+
+
 bool isLess(const TemplateMatch &first, const TemplateMatch &second)
       {
                   // number of matched template elements
@@ -271,6 +285,7 @@ class TemplateMatch
                   }
 
             templateElementCount_ = templ.pitchCount();
+            scalePitches_ = templ.scalePitches();
             tonicPitches_ = templ.tonicPitches();
             noteCount_ = notes.size();
             popularity_ = templ.popularity();
@@ -314,9 +329,9 @@ class TemplateMatch
             {
             return matches_.begin()->second;
             }
-      bool isTonic() const
+      bool isTonic(int pitch) const
             {
-            return
+            return tonicPitches_.find(pitch) != tonicPitches_.end();
             }
       size_t matchedNoteCount() const
             {
