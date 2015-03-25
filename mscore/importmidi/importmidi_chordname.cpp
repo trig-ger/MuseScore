@@ -492,6 +492,30 @@ void ff(const std::multimap<ReducedFraction, MidiChord> &allChords)
 
 
 
+void fe()
+      {
+      Tonality currentTonality;
+
+      for (auto &chord: chords) {
+            Template templ = topTemplate(chord);
+            // ToDo: can there be multiple equal top templates?
+
+            if (allTemplateElsHaveNotes() && noNonTemplateNotes()) {
+                  assignTonalityToChord(templ.tonality);
+                  currentTonality = templ.tonality;
+                  continue;
+                  }
+
+            if (notAllTemplateElsMatched() && noNonTemplateNotes()) {
+                  assignTonalityToChord(templ.tonality);
+                  // same currentTonality
+                  continue;
+                  }
+            }
+      }
+
+
+
 
 
 
