@@ -524,6 +524,28 @@ void dyn()
             excludeTemplate();
       }
 
+void dyndyn()
+      {
+      for (auto chord: chords) {
+            const auto templatesWithAllMatchedElems = find;
+            if (!templatesWithAllMatchedElems.empty()) {
+                  chooseBetweenThem;
+                  }
+            else {
+                  useAllTemplates();
+                  }
+            }
+      // take into account:
+      // - template order (top - more probable, less penalty)
+      // - keep previous tonality (penalty for tonality change)
+      // - probability of tonality transitions
+      //    (penalty for rare tonality transitions, not in the list)
+
+
+      // a passing chord, if before it and after it tonality is equal
+      // (has quite good template match), otherwise it may signal to tonality change
+      }
+
 
 
 
