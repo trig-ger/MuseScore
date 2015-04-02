@@ -223,13 +223,13 @@ double keyProfileScore(int pitchDistance)
 
 
 
-const std::set<int> majorScalePitches()
+const std::set<int>& majorScalePitches()
       {
       static const std::set<int> majorScale = {0, 2, 4, 5, 7, 9, 11};
       return majorScale;
       }
 
-const std::set<int> minorScalePitches()
+const std::set<int>& minorScalePitches()
       {
       static const std::set<int> minorScale = {0, 2, 3, 5, 7, 8, 10};
       return minorScale;
@@ -515,6 +515,14 @@ void fe()
       }
 
 
+void dyn()
+      {
+      const double statePenalty = templatePenalty();
+      const double transitionPenalty = 1 / tonalityTransitionProbability();
+
+      if (noTemplateAndScaleNotes())
+            excludeTemplate();
+      }
 
 
 
