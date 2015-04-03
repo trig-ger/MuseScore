@@ -544,6 +544,13 @@ void dyndyn()
 
       // a passing chord, if before it and after it tonality is equal
       // (has quite good template match), otherwise it may signal to tonality change
+
+      // tonality change penalty depends on the exactness of match of the tempalte
+      // and chord - if match is exact then there is no tonality change penalty,
+      // if all notes are in template, but no all elements matched - same
+      // (if no more suitable templates),
+      // if there are some not matched notes, then we introduce a tonality change penalty
+      // or signal that this is a passing chord (without tonality change)
       }
 
 
