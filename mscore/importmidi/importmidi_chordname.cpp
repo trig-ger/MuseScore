@@ -557,7 +557,64 @@ void dyndyn()
       // that matches better but we don't pick it
       }
 
+struct MatchData
+      {
+      std::vector<TemplateMatch> matches;
+      std::multimap<ReducedFraction, MidiChord>::const_iterator chordIt;
+      };
 
+double transitionPenalty(int pitchDistance)
+      {
+      switch (pitchDistance)
+      {
+      case 0:
+            break;
+      case 1:
+            break;
+      }
+      }
+
+void applyDynamicProgramming(std::vector<MatchData> &matchData)
+      {
+      for (int chordIndex = 0; chordIndex != (int)matchData.size(); ++chordIndex) {
+            MatchData &d = matchData[chordIndex];
+            for (int matchIndex = 0; matchIndex != (int)d.matches.size(); ++matchIndex) {
+                  TemplateMatch &m = d.matches[matchIndex];
+
+                  const auto timePenalty = (d.chordIt->first - m.time).absValue().toDouble();
+                  const double levelDiff = qAbs(d.metricalLevelForLen - m.metricalLevel);
+                  m.penalty = timePenalty * levelDiff;
+
+                  if (chordIndex == 0)
+                        continue;
+
+                  const MatchData &dPrev = matchData[chordIndex - 1];
+                  double minPenalty = std::numeric_limits<double>::max();
+                  int minMatchIndex = -1;
+
+                  for (int matchPrev = 0; matchPrev != (int)dPrev.matches.size(); ++matchPrev) {
+                        const TemplateMatch &mPrev = dPrev.matches[matchPrev];
+                        if (mPrev.time > m.time)
+                              continue;
+
+                        double penalty = mPrev.penalty;
+                        penalty += transitionPenalty(m, mPrev);
+
+                        if (penalty < minPenalty) {
+                              minPenalty = penalty;
+                              minMatchIndex = matchPrev;
+                              }
+                        }
+
+                  Q_ASSERT_X(minMatchIndex != -1,
+                             "MidiChordName::applyDynamicProgramming",
+                             "Min match index was not found");
+
+                  m.penalty += minPenalty;
+                  m.prevMatchIndex = minMatchIndex;
+                  }
+            }
+      }
 
 
 /*
