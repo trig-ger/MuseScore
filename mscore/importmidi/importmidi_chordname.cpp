@@ -551,6 +551,10 @@ void dyndyn()
       // (if no more suitable templates),
       // if there are some not matched notes, then we introduce a tonality change penalty
       // or signal that this is a passing chord (without tonality change)
+
+      // chord is passing if we keep previous tonality but this tonality
+      // does not match chord exactly, especially if there is another template
+      // that matches better but we don't pick it
       }
 
 
