@@ -435,17 +435,20 @@ class ChordTemplate
 
                         // find tonic: 4 for diminished chords, 1 - for other chords
                         // first tonic insert immediately
-            tonicPitches_.insert(*templatePitches_.begin());
+            const int tonic = *templatePitches_.begin();
+            tonicPitches_.insert(tonic);
 
             const bool isDiminished = isDiminishedChord(templatePitches_);
             if (isDiminished) {
                   for (int i = 1; i <= 3; ++i)
-                        tonicPitches_.insert(*tonicPitches_.begin() + i * dimInterval);
+                        tonicPitches_.insert(tonic + i * dimInterval);
                   }
 
                         // fill scale pitches
             if (!isDiminished) {
-                  scalePitches_ = majorScalePitches();
+                  for (int pitch: majorScalePitches())
+                        scalePitches_.insert(toTemplatePitch(pitch + tonic));
+
                   scalePitches_ = minorNaturalScalePitches();
                   }
             }
