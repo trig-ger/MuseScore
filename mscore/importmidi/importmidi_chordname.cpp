@@ -205,6 +205,25 @@ void setChordNames(QList<MTrack> &tracks)
             }
       }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // key profile score of all matches, see
 //   D. Temperley - The Cognition of Basic Musical Structures (2001)
 // pitchDistance - distance from tonic
@@ -225,14 +244,32 @@ double keyProfileScore(int pitchDistance)
 
 const std::set<int>& majorScalePitches()
       {
-      static const std::set<int> majorScale = {0, 2, 4, 5, 7, 9, 11};
-      return majorScale;
+      static const std::set<int> s = {0, 2, 4, 5, 7, 9, 11};
+      return s;
       }
 
-const std::set<int>& minorScalePitches()
+const std::set<int>& minorNaturalScalePitches()
       {
-      static const std::set<int> minorScale = {0, 2, 3, 5, 7, 8, 10};
-      return minorScale;
+      static const std::set<int> s = {0, 2, 3, 5, 7, 8, 10};
+      return s;
+      }
+
+const std::set<int>& minorMelodicScalePitches()
+      {
+      static const std::set<int> s = {0, 2, 3, 5, 7, 9, 11};
+      return s;
+      }
+
+const std::set<int>& minorHarmonicScalePitches()
+      {
+      static const std::set<int> s = {0, 2, 3, 5, 7, 8, 11};
+      return s;
+      }
+
+const std::set<int>& diminishedScalePitches()
+      {
+      static const std::set<int> s = {0, 2, 3, 5, 6, 8, 9, 11};
+      return s;
       }
 
 
@@ -368,13 +405,49 @@ class TemplateMatch
       double popularity_;                 // approximate popularity in music
       };
 
+bool isDiminishedChord(const std::set<int> &templatePitches)
+      {
+      const int dimInterval = 3;
+
+      for (auto it = std::next(templatePitches.begin());
+                               it != templatePitches.end(); ++it) {
+            if (*it - *std::prev(it) != dimInterval)
+                  return false;
+            }
+
+      return true;
+      }
+
 class ChordTemplate
       {
    public:
       ChordTemplate(const QString &name, const std::set<int> &pitches)
             : name_(name)
-            , templatePitches_(pitches)
             {
+            Q_ASSERT(!pitches.empty());
+
+            if (pitches.empty())
+                  return;
+
+                        // fill template pitches
+            for (int pitch: pitches)
+                  templatePitches_.insert(toTemplatePitch(pitch));
+
+                        // find tonic: 4 for diminished chords, 1 - for other chords
+                        // first tonic insert immediately
+            tonicPitches_.insert(*templatePitches_.begin());
+
+            const bool isDiminished = isDiminishedChord(templatePitches_);
+            if (isDiminished) {
+                  for (int i = 1; i <= 3; ++i)
+                        tonicPitches_.insert(*tonicPitches_.begin() + i * dimInterval);
+                  }
+
+                        // fill scale pitches
+            if (!isDiminished) {
+                  scalePitches_ = majorScalePitches();
+                  scalePitches_ = minorNaturalScalePitches();
+                  }
             }
 
       QString name() const { return name_; }
@@ -387,22 +460,22 @@ class ChordTemplate
             return templatePitches_.find(toTemplatePitch(templatePitch))
                         != templatePitches_.end();
             }
-      bool hasScalePitch(int scalePitch) const
-            {
-            return scalePitches_.find(toTemplatePitch(scalePitch))
-                        != scalePitches_.end();
-            }
       bool hasTonicPitch(int tonicPitch) const
             {
             return tonicPitches_.find(toTemplatePitch(tonicPitch))
                         != tonicPitches_.end();
             }
+      bool hasScalePitch(int scalePitch) const
+            {
+            return scalePitches_.find(toTemplatePitch(scalePitch))
+                        != scalePitches_.end();
+            }
 
    private:
       QString name_;
       std::set<int> templatePitches_;
+      std::set<int> tonicPitches_;  // usually one; diminished triad chords have 4 tonics
       std::set<int> scalePitches_;
-      std::set<int> tonicPitches_;  // diminished triad chords have 4 tonics
             // approximate popularity of use in sample corpus
             // according to Pardo, B., & Birmingham, W. P. (2002).
             // Algorithms for Chordal Analysis. Computer Music Journal, Vol. 26, p. 27–49
@@ -572,6 +645,29 @@ double transitionPenalty(int pitchDistance)
       case 1:
             break;
       }
+      }
+
+std::vector<MatchData> findMatchData(
+            const std::deque<std::multimap<ReducedFraction, MidiChord>::const_iterator> &chords,
+            const ReducedFraction &rangeStart,
+            const ReducedFraction &rangeEnd,
+            const ReducedFraction &basicQuant,
+            const ReducedFraction &barStart,
+            const ReducedFraction &barFraction)
+      {
+
+      Q_ASSERT_X(!chords.empty(), "MidiChordName::findQuantData", "Empty chords");
+
+      std::vector<MatchData> data;
+      const auto tupletQuant = findTupletQuant(chords);
+      const auto beatLen = Meter::beatLength(barFraction);
+
+      findQuants(data, chords, rangeStart, rangeEnd, basicQuant, tupletQuant, barFraction);
+      findChordRangeStarts(data, rangeStart, rangeEnd, barStart, beatLen);
+      findChordRangeEnds(data, rangeStart, rangeEnd, barStart, beatLen);
+      findMetricalLevels(data, chords, tupletQuant, barStart, barFraction);
+
+      return data;
       }
 
 void applyDynamicProgramming(std::vector<MatchData> &matchData)
