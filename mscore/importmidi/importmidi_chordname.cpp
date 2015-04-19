@@ -447,6 +447,11 @@ class MajorTriad : public ChordTemplate
             {
             }
 
+      QString name(int transposition) const
+            {
+            return QString("%1maj").arg(transposition);
+            }
+
    private:
       };
 
