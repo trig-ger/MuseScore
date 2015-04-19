@@ -405,6 +405,80 @@ class TemplateMatch
       double popularity_;                 // approximate popularity in music
       };
 
+
+
+class ChordTemplate
+      {
+   public:
+      ChordTemplate(const std::set<int> &templatePitches)
+            {
+            Q_ASSERT(!templatePitches.empty());
+
+            templatePitches_ = templatePitches;
+            }
+
+      virtual ~ChordTemplate() {}
+
+      static virtual const std::set<int>& tonicPitches(int transposition) override
+            {
+            static const std::set<int> tonicSet = {transposition};
+            return tonicSet;
+            }
+
+      bool hasTemplatePitch(int pitch) const
+            {
+            return templatePitches_.find(toTemplatePitch(pitch))
+                        != templatePitches_.end();
+            }
+
+   protected:
+      static int toTemplatePitch(int pitch) { return pitch % 12; }
+
+   private:
+      std::set<int> templatePitches_;
+      };
+
+
+class MajorTriad : public ChordTemplate
+      {
+   public:
+      MajorTriad()
+            : ChordTemplate({0, 4, 7})
+            {
+            }
+
+   private:
+      };
+
+class DiminishedTriad : public ChordTemplate
+      {
+public:
+      DiminishedTriad()
+            : ChordTemplate({0, 3, 6})
+            {
+            }
+
+      static virtual const std::set<int>& tonicPitches(int transposition) override
+            {
+            static const std::set<int> tonicSet = {
+                  transposition + 0,
+                  transposition + 3,
+                  transposition + 6,
+                  transposition + 9
+                  };
+            return tonicSet;
+            }
+
+private:
+      };
+
+
+
+
+
+
+
+
 bool isDiminishedChord(const std::set<int> &templatePitches)
       {
       const int dimInterval = 3;
