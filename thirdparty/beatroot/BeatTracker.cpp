@@ -39,7 +39,7 @@ std::vector<double> beatTrack(const AgentParameters &params,
             agents.push_back(new Agent(params, ioi));
             }
       else            // tempo not given; use tempo induction
-            agents = Induction::beatInduction(params, events);
+            agents = Induction::doBeatInduction(params, events);
 
       if (!beats.empty()) {
             for (AgentList::iterator itr = agents.begin(); itr != agents.end(); ++itr) {

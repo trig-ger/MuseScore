@@ -1,210 +1,293 @@
-/* -*- c-basic-offset: 4 indent-tabs-mode: nil -*-  vi:set ts=8 sts=4 sw=4: */
-
-/*
-  Vamp feature extraction plugin for the BeatRoot beat tracker.
-
-  Centre for Digital Music, Queen Mary, University of London.
-  This file copyright 2011 Simon Dixon, Chris Cannam and QMUL.
-
-  This program is free software; you can redistribute it and/or
-  modify it under the terms of the GNU General Public License as
-  published by the Free Software Foundation; either version 2 of the
-  License, or (at your option) any later version.  See the file
-  COPYING included with this distribution for more information.
-*/
-
 #include "Induction.h"
 #include "Agent.h"
 #include "AgentList.h"
 
-#include <vector>
+#include <set>
+#include <map>
 #include <cmath>
+#include <limits>
+#include <vector>
+#include <algorithm>
+
+#include <QtGlobal>
 
 
-double Induction::clusterWidth = 0.025;
-double Induction::minIOI = 0.070;
-double Induction::maxIOI = 2.500;
-double Induction::minIBI = 0.3;
-double Induction::maxIBI = 1.0;
-int Induction::topN = 10;
+namespace Induction {
+
+namespace {
+
+/** The maximum difference in IOIs which are in the same cluster */
+const double clusterWidth = 0.025;
+
+/** The minimum IOI for inclusion in a cluster */
+const double minIOI = 0.070;
+
+/** The maximum IOI for inclusion in a cluster */
+const double maxIOI = 2.500;
+
+/** The minimum inter-beat interval (IBI), i.e. the maximum tempo
+ *  hypothesis that can be returned.
+ *  0.30 seconds == 200 BPM
+ *  0.25 seconds == 240 BPM
+ */
+const double minIBI = 0.3;
+
+/** The maximum inter-beat interval (IBI), i.e. the minimum tempo
+ *  hypothesis that can be returned.
+ *  1.00 seconds ==  60 BPM
+ *  0.75 seconds ==  80 BPM
+ *  0.60 seconds == 100 BPM
+ */
+const double maxIBI = 1.0;   // 60 BPM, was 0.75 => 80 BPM
+
+/** The maximum number of tempo hypotheses to return */
+const int topN = 10;
 
 
-AgentList Induction::beatInduction(const AgentParameters &params,
-                                   const EventList &events)
-      {
-      int i, j, b, bestCount;
-      bool submult;
-      int intervals = 0;			// number of interval clusters
-      std::vector<int> bestn;             // count of high-scoring clusters
-      bestn.resize(topN);
+        // IOI = inter-onset interval
+struct IoiCluster
+{
+    int ioiCount;
+    int score;
+};
 
-      double ratio, err;
-      int degree;
-      int maxClusterCount = (int) ceil((maxIOI - minIOI) / clusterWidth);
-      std::vector<double> clusterMean;
-      clusterMean.resize(maxClusterCount);
-      std::vector<int> clusterSize;
-      clusterSize.resize(maxClusterCount);
-      std::vector<int> clusterScore;
-      clusterScore.resize(maxClusterCount);
+bool addToClosestCluster(double ioi, std::map<double, IoiCluster> &clusters)
+{
+            // compare differences with IOIs of two closest clusters
+            // and select the minumum difference
+    double diff1 = std::numeric_limits<double>::max();
+    double diff2 = std::numeric_limits<double>::max();
 
-      EventList::const_iterator ptr1, ptr2;
-      Event e1, e2;
-      ptr1 = events.begin();
+    const auto it = clusters.upper_bound(ioi);
+    if (it != clusters.end())
+        diff1 = std::fabs(ioi - it->first);
+    if (it != clusters.begin())
+        diff2 = std::fabs(ioi - std::prev(it)->first);
 
-      while (ptr1 != events.end()) {
-            e1 = *ptr1;
-            ++ptr1;
-            ptr2 = events.begin();
-            e2 = *ptr2;
-            ++ptr2;
-            while (e2 != e1 && ptr2 != events.end()) {
-                  e2 = *ptr2;
-                  ++ptr2;
+    auto found = clusters.end();
+    if (diff1 < diff2 && diff1 < clusterWidth)
+        found = it;
+    else if (diff2 < diff1 && diff2 < clusterWidth)
+        found = std::prev(it);
+
+    if (found != clusters.end()) {
+                // change ioi of the cluster; as it is a map key,
+                //   we need to erase and insert the updated cluster
+        const double avgIoi = (found->first * found->second.ioiCount + ioi)
+                              / (found->second.ioiCount + 1);
+        IoiCluster updCluster;
+        updCluster.ioiCount = found->second.ioiCount + 1;
+        const auto ins = clusters.insert({avgIoi, updCluster});
+        if (!ins.second)  // same ioi already exists in the map
+              ins.first->second = updCluster;
+        if (ins.first != found)
+              clusters.erase(found);
+
+        return true;
+    }
+
+    return false;
+}
+
+std::map<double, IoiCluster> findClusters(const EventList &events)
+{
+    std::map<double, IoiCluster> clusters;  // <average ioi, cluster>
+
+    for (size_t i = 0; i < events.size() - 1; ++i) {
+          const Event &e1 = events[i];
+
+          for (size_t j = i + 1; j < events.size(); ++j) {
+                const Event &e2 = events[j];
+
+                Q_ASSERT(e2.time > e1.time);
+
+                const double ioi = e2.time - e1.time;
+                if (ioi < minIOI)		// skip short intervals
+                      continue;
+                if (ioi > maxIOI)		// IOI is too long
+                      break;
+
+                if (!addToClosestCluster(ioi, clusters)) {
+                              // no suitable cluster; create a new one
+                      IoiCluster cluster;
+                      cluster.ioiCount = 1;
+                      clusters.insert({ioi, cluster});
+                      }
+                }
+          }
+
+    return clusters;
+}
+
+void mergeSimilarClusters(std::map<double, IoiCluster> &clusters)
+{
+    if (clusters.size() <= 1)
+        return;
+
+    for (auto it = clusters.begin(); it != std::prev(clusters.end()); ) {
+        const IoiCluster &c1 = it->second;
+        const auto next = std::next(it);
+
+        if (std::fabs(next->first - it->first) < clusterWidth) {
+            const IoiCluster &c2 = next->second;
+
+            if (next->first == it->first) {
+                  it->second.ioiCount = c1.ioiCount + c2.ioiCount;
+                  it = clusters.erase(next);
+                  continue;
                   }
-            while (ptr2 != events.end()) {
-                  e2 = *ptr2;
-                  ++ptr2;
-                  double ioi = e2.time - e1.time;
-                  if (ioi < minIOI)		// skip short intervals
-                        continue;
-                  if (ioi > maxIOI)		// ioi too long
-                        break;
-                  for (b = 0; b < intervals; b++)		// assign to nearest cluster
-                        if (std::fabs(clusterMean[b] - ioi) < clusterWidth) {
-                              if ((b < intervals - 1) && (std::fabs(clusterMean[b + 1] - ioi)
-                                                          < std::fabs(clusterMean[b] - ioi))) {
-                                    b++;		// next cluster is closer
-                                    }
-                              clusterMean[b] = (clusterMean[b] * clusterSize[b] + ioi)
-                                          / (clusterSize[b] + 1);
-                              clusterSize[b]++;
-                              break;
-                              }
-                  if (b == intervals) {         // no suitable cluster; create new one
-                        if (intervals == maxClusterCount) {
-                                                // System.err.println("Warning: Too many clusters");
-                              continue;         // ignore this IOI
-                              }
-                        intervals++;
-                        for ( ; (b > 0) && (clusterMean[b - 1] > ioi); b--) {
-                              clusterMean[b] = clusterMean[b - 1];
-                              clusterSize[b] = clusterSize[b - 1];
-                              }
-                        clusterMean[b] = ioi;
-                        clusterSize[b] = 1;
-                        }
-                  }
-            }
-      for (b = 0; b < intervals; b++)	// merge similar intervals
-                        // TODO: they are now in order, so don't need the 2nd loop
-                        // TODO: check BOTH sides before averaging or upper gps don't work
-            for (i = b + 1; i < intervals; i++)
-                  if (std::fabs(clusterMean[b] - clusterMean[i]) < clusterWidth) {
-                        clusterMean[b] = (clusterMean[b] * clusterSize[b] +
-                                          clusterMean[i] * clusterSize[i]) /
-                                    (clusterSize[b] + clusterSize[i]);
-                        clusterSize[b] = clusterSize[b] + clusterSize[i];
-                        --intervals;
-                        for (j = i + 1; j <= intervals; j++) {
-                              clusterMean[j - 1] = clusterMean[j];
-                              clusterSize[j - 1] = clusterSize[j];
-                              }
-                        }
-      if (intervals == 0)
-            return AgentList();
-      for (b = 0; b < intervals; b++)
-            clusterScore[b] = 10 * clusterSize[b];
-      bestn[0] = 0;
-      bestCount = 1;
+                  // change ioi of the cluster; as it is a map key,
+                  //   we need to erase and insert the updated cluster
+            const double avgIoi = (it->first * c1.ioiCount + next->first * c2.ioiCount)
+                                  / (c1.ioiCount + c2.ioiCount);
+            IoiCluster newCluster;
+            newCluster.ioiCount = c1.ioiCount + c2.ioiCount;
 
-      for (b = 0; b < intervals; b++) {
-            for (i = 0; i <= bestCount; i++) {
-                  if (i < topN && (i == bestCount || clusterScore[b] > clusterScore[bestn[i]])) {
-                        if (bestCount < topN)
-                              bestCount++;
-                        for (j = bestCount - 1; j > i; j--)
-                              bestn[j] = bestn[j - 1];
-                        bestn[i] = b;
-                        break;
-                        }
-                  }
-            }
-      for (b = 0; b < intervals; b++) {         // score intervals
-            for (i = b + 1; i < intervals; i++) {
-                  ratio = clusterMean[b] / clusterMean[i];
-                  submult = ratio < 1;
-                  if (submult)
-                        degree = (int) nearbyint(1 / ratio);
-                  else
-                        degree = (int) nearbyint(ratio);
-                  if ((degree >= 2) && (degree <= 8)) {
-                        if (submult)
-                              err = std::fabs(clusterMean[b] * degree - clusterMean[i]);
-                        else
-                              err = std::fabs(clusterMean[b] - clusterMean[i] * degree);
-                        if (err < (submult ? clusterWidth : clusterWidth * degree)) {
-                              if (degree >= 5)
-                                    degree = 1;
-                              else
-                                    degree = 6 - degree;
-                              clusterScore[b] += degree * clusterSize[i];
-                              clusterScore[i] += degree * clusterSize[b];
-                              }
-                        }
-                  }
-            }
+            clusters.erase(it);
+            clusters.erase(next);
+            const auto ins = clusters.insert({avgIoi, newCluster});
 
-      AgentList a;
-      for (int index = 0; index < bestCount; index++) {
-            b = bestn[index];
-                              // Adjust it, using the size of super- and sub-intervals
-            double newSum = clusterMean[b] * clusterScore[b];
-            int newCount = clusterSize[b];
-            int newWeight = clusterScore[b];
+            Q_ASSERT(ins.second);
 
-            for (i = 0; i < intervals; i++) {
-                  if (i == b)
-                        continue;
-                  ratio = clusterMean[b] / clusterMean[i];
-                  if (ratio < 1) {
-                        degree = (int) nearbyint(1 / ratio);
-                        if ((degree >= 2) && (degree <= 8)) {
-                              err = std::fabs(clusterMean[b] * degree - clusterMean[i]);
-                              if (err < clusterWidth) {
-                                    newSum += clusterMean[i] / degree * clusterScore[i];
-                                    newCount += clusterSize[i];
-                                    newWeight += clusterScore[i];
-                                    }
-                              }
-                        }
-                  else {
-                        degree = (int) nearbyint(ratio);
-                        if ((degree >= 2) && (degree <= 8)) {
-                              err = std::fabs(clusterMean[b] - degree * clusterMean[i]);
-                              if (err < clusterWidth * degree) {
-                                    newSum += clusterMean[i] * degree * clusterScore[i];
-                                    newCount += clusterSize[i];
-                                    newWeight += clusterScore[i];
-                                    }
-                              }
-                        }
-                  }
-            double beat = newSum / newWeight;
-                        // Scale within range ... hope the grouping isn't ternary :(
-            while (beat < minIBI)		// Maximum speed
-                  beat *= 2.0;
-            while (beat > maxIBI)		// Minimum speed
-                  beat /= 2.0;
-            if (beat >= minIBI) {
-                  a.push_back(new Agent(params, beat));
-                  }
-            }
-      return a;
-      }
+            it = ins.first;
+            continue;
+        }
+        ++it;
+    }
+}
 
-int Induction::top(int low)
-      {
-      return low + 25; // low/10;
-      }
+void setInitialScores(std::map<double, IoiCluster> &clusters)
+{
+    for (auto &i: clusters)
+          i.second.score = 10 * i.second.ioiCount;
+}
 
+struct DescScore {
+    bool operator()(const std::map<double, IoiCluster>::const_iterator &l,
+                    const std::map<double, IoiCluster>::const_iterator &r) const
+    {
+        return l->second.score > r->second.score;
+    }
+};
+
+std::set<std::map<double, IoiCluster>::const_iterator, DescScore>
+findBestNClusters(const std::map<double, IoiCluster> &clusters)
+{
+    // count of high-scoring clusters
+    std::set<std::map<double, IoiCluster>::const_iterator, DescScore> bestN;
+
+    for (auto it = clusters.begin(); it != clusters.end(); ++it) {
+        const int score = it->second.score;
+
+        if (bestN.size() < topN) {
+            bestN.insert(it);
+        }
+        else if (score <= (*bestN.begin())->second.score
+                 && score > (*std::prev(bestN.end()))->second.score) {
+            bestN.insert(it);
+            bestN.erase(std::prev(bestN.end()));
+        }
+    }
+
+    return bestN;
+}
+
+// if cluster intervals are multiples of each other
+//    then they are related by some degree
+int findRelationDegree(double ioi1, double ioi2)
+{
+    const double maxAvg = std::max(ioi1, ioi2);
+    const double minAvg = std::min(ioi1, ioi2);
+
+    const int degree = std::nearbyint(maxAvg / minAvg);
+    if (degree < 2 || degree > 8)
+        return -1;
+
+    const double diff = std::fabs(minAvg * degree - maxAvg);
+    const double tol = (ioi1 > ioi2)
+                      ? degree * clusterWidth : clusterWidth;
+    if (diff >= tol)
+        return -1;
+
+    return degree;
+}
+
+void rankRelatedClusters(std::map<double, IoiCluster> &clusters)
+{
+    for (auto it1 = clusters.begin(); it1 != std::prev(clusters.end()); ++it1) {
+        for (auto it2 = std::next(it1); it2 != clusters.end(); ++it2) {
+
+            int degree = findRelationDegree(it1->first, it2->first);
+            if (degree < 0)
+                continue;
+
+            degree = (degree >= 5) ? 1 : 6 - degree;
+
+            it1->second.score += degree * it2->second.ioiCount;
+            it2->second.score += degree * it1->second.ioiCount;
+        }
+    }
+}
+
+AgentList createAgentList(
+        const AgentParameters &params,
+        const std::set<std::map<double, IoiCluster>::const_iterator, DescScore> &bestClusters,
+        const std::map<double, IoiCluster> &clusters)
+{
+    AgentList a;
+
+    for (const auto &bestIt: bestClusters) {
+                // Adjust it, using the size of super- and sub-intervals
+        double newSum = bestIt->first * bestIt->second.score;
+        int newCount = bestIt->second.ioiCount;
+        int newWeight = bestIt->second.score;
+
+        for (const auto &i: clusters) {
+            if (i.first == bestIt->first)
+                continue;
+
+            double degree = findRelationDegree(bestIt->first, i.first);
+            if (degree < 0)
+                continue;
+
+            if (bestIt->first < i.first)
+                degree = 1.0 / degree;
+
+            newSum += i.first * degree * i.second.score;
+            newCount += i.second.ioiCount;
+            newWeight += i.second.score;
+        }
+
+        double beat = newSum / newWeight;
+                // Scale within range ... hope the grouping isn't ternary :(
+        while (beat < minIBI)		// Maximum speed
+            beat *= 2.0;
+        while (beat > maxIBI)		// Minimum speed
+            beat /= 2.0;
+
+        if (beat >= minIBI)
+            a.push_back(new Agent(params, beat));
+    }
+
+    return a;
+}
+
+} // namespace
+
+AgentList doBeatInduction(const AgentParameters &params, const EventList &events)
+{
+    auto clusters = findClusters(events);
+    if (clusters.empty())
+        return AgentList();
+
+    mergeSimilarClusters(clusters);
+    setInitialScores(clusters);
+            // find best clusters (as iterators) before changing cluster scores
+    const auto bestClusters = findBestNClusters(clusters);
+            // no more cluster insertion/deletion from now
+    rankRelatedClusters(clusters);
+
+    return createAgentList(params, bestClusters, clusters);
+}
+
+} // namespace Induction

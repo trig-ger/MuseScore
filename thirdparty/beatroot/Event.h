@@ -16,7 +16,7 @@
 #ifndef _EVENT_H_
 #define _EVENT_H_
 
-#include <list>
+#include <vector>
 
 
 struct Event
@@ -31,13 +31,13 @@ struct Event
             : time(t), salience(s)
             {}
 
-      bool operator!=(const Event &e)
+      bool operator!=(const Event &e) const
             {
             return time != e.time || salience != e.salience;
             }
       };
 
-typedef std::list<Event> EventList;
+typedef std::vector<Event> EventList;
 
 
 #endif
