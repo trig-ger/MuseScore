@@ -25,62 +25,59 @@ const double AgentList::DEFAULT_BI = 0.02;
 const double AgentList::DEFAULT_BT = 0.04;
 
 
-void AgentList::add(Agent *newAgent, bool sort)
+AgentList::~AgentList()
+      {
+      }
+
+void AgentList::add(const Agent &newAgent)
       {
       push_back(newAgent);
-      if (sort)
-            this->sort();
+      this->sort();
       }
 
 void AgentList::sort()
       {
       struct {
-            bool operator()(const Agent *a, const Agent *b)
+            bool operator()(const Agent &a, const Agent &b)
                   {
-                  if (a->beatInterval == b->beatInterval)
-                        return a->idNumber < b->idNumber;         // ensure stable ordering
-                  return a->beatInterval < b->beatInterval;
+                  if (a.beatInterval == b.beatInterval)
+                        return a.idNumber < b.idNumber;         // ensure stable ordering
+                  return a.beatInterval < b.beatInterval;
                   }
             } agentComparator;
 
       std::sort(list.begin(), list.end(), agentComparator);
       }
 
-void AgentList::remove(const AgentList::iterator &itr)
-      {
-      list.erase(itr);
-      }
-
 void AgentList::removeDuplicates()
       {
       sort();
-      for (iterator itr = begin(); itr != end(); ++itr) {
-            if ((*itr)->phaseScore < 0.0)       // already flagged for deletion
+      for (auto it1 = begin(); it1 != end(); ++it1) {
+            if (it1->phaseScore < 0.0)              // already flagged for deletion
                   continue;
-            iterator itr2 = itr;
-            for (++itr2; itr2 != end(); ++itr2) {
-                  if ((*itr2)->beatInterval - (*itr)->beatInterval > DEFAULT_BI)
+            auto it2 = it1;
+            for (++it2; it2 != end(); ++it2) {
+                  if (it2->beatInterval - it1->beatInterval > DEFAULT_BI)
                         break;
-                  if (std::fabs((*itr)->beatTime - (*itr2)->beatTime) > DEFAULT_BT)
+                  if (std::fabs(it1->beatTime - it2->beatTime) > DEFAULT_BT)
                         continue;
-                  if ((*itr)->phaseScore < (*itr2)->phaseScore) {
-                        (*itr)->phaseScore = -1.0;	// flag for deletion
+                  if (it1->phaseScore < it2->phaseScore) {
+                        it1->phaseScore = -1.0;     // flag for deletion
                         break;
                         }
                   else {
-                        (*itr2)->phaseScore = -1.0;	// flag for deletion
+                        it2->phaseScore = -1.0;     // flag for deletion
                         }
                   }
             }
       int removed = 0;
-      for (iterator itr = begin(); itr != end(); ) {
-            if ((*itr)->phaseScore < 0.0) {
+      for (auto it = begin(); it != end(); ) {
+            if (it->phaseScore < 0.0) {
                   ++removed;
-                  delete *itr;
-                  list.erase(itr);
+                  list.erase(it);
                   }
             else {
-                  ++itr;
+                  ++it;
                   }
             }
       }
@@ -90,8 +87,8 @@ void AgentList::beatTrack(const EventList &el,
                           const AgentParameters &params,
                           double stop)
       {
-      EventList::const_iterator ei = el.begin();
-      bool phaseGiven = !empty() && ((*begin())->beatTime >= 0); // if given for one, assume given for others
+      auto ei = el.begin();
+      bool phaseGiven = !empty() && (begin()->beatTime >= 0); // if given for one, assume given for others
       while (ei != el.end()) {
             Event ev = *ei;
             ++ei;
@@ -104,23 +101,23 @@ void AgentList::beatTrack(const EventList &el,
                         // list while scanning without disrupting our scan.  Each
                         // agent needs to be re-added to our own list explicitly
                         // (since it is modified by e.g. considerAsBeat)
-            Container currentAgents = list;
+            auto currentAgents = list;
             list.clear();
-            for (Container::iterator ai = currentAgents.begin();
+            for (auto ai = currentAgents.begin();
                         ai != currentAgents.end(); ++ai) {
-                  Agent *currentAgent = *ai;
-                  if (currentAgent->beatInterval != prevBeatInterval) {
+                  Agent &currentAgent = *ai;
+                  if (currentAgent.beatInterval != prevBeatInterval) {
                         if ((prevBeatInterval >= 0) && !created && (ev.time < 5.0)) {
                                           // Create new agent with different phase
-                              Agent *newAgent = new Agent(params, prevBeatInterval);
+                              Agent newAgent(params, prevBeatInterval);
                                           // This may add another agent to our list as well
-                              newAgent->considerAsBeat(ev, *this);
+                              newAgent.considerAsBeat(ev, *this);
                               add(newAgent);
                               }
-                        prevBeatInterval = currentAgent->beatInterval;
+                        prevBeatInterval = currentAgent.beatInterval;
                         created = phaseGiven;
                         }
-                  if (currentAgent->considerAsBeat(ev, *this))
+                  if (currentAgent.considerAsBeat(ev, *this))
                         created = true;
                   add(currentAgent);
                   }           // loop for each agent
@@ -132,16 +129,17 @@ Agent *AgentList::bestAgent()
       {
       double best = -1.0;
       Agent *bestAg = 0;
-      for (iterator itr = begin(); itr != end(); ++itr) {
-            if ((*itr)->events.empty())
+
+      for (auto it = begin(); it != end(); ++it) {
+            if (it->events.empty())
                   continue;
-            double conf = (*itr)->phaseScore
-                        / (useAverageSalience ? (double)(*itr)->beatCount : 1.0);
+            double conf = it->phaseScore / (useAverageSalience ? it->beatCount : 1.0);
             if (conf > best) {
-                  bestAg = *itr;
+                  bestAg = &*it;
                   best = conf;
                   }
             }
+
       return bestAg;
       }
 

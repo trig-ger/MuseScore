@@ -266,7 +266,7 @@ AgentList createAgentList(
             beat /= 2.0;
 
         if (beat >= minIBI)
-            a.push_back(new Agent(params, beat));
+            a.push_back(Agent(params, beat));
     }
 
     return a;

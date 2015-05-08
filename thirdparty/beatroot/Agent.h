@@ -20,7 +20,7 @@
 
 
 class AgentList;
-struct Event;
+class Event;
 
 class AgentParameters
       {
@@ -69,6 +69,12 @@ class AgentParameters
 class Agent
       {
    public:
+          /** Constructor: the work is performed by init()
+           *  @param ibi The beat period (inter-beat interval)
+           *  of the Agent's tempo hypothesis.
+           */
+      Agent(const AgentParameters &params, double ibi);
+
                   /** The Agent's unique identity number. */
       int idNumber;
 
@@ -104,14 +110,6 @@ class Agent
                   /** The list of Events (onsets) accepted by this Agent as beats,
                    *  plus interpolated beats. */
       EventList events;
-
-                  /** Constructor: the work is performed by init()
-                   *  @param ibi The beat period (inter-beat interval)
-                   *  of the Agent's tempo hypothesis.
-                   */
-      Agent(const AgentParameters &params, double ibi);
-
-      Agent *clone() const;
 
                   /** Accept a new Event as a beat time, and update the state of the Agent accordingly.
                    *  @param e The Event which is accepted as being on the beat.

@@ -19,6 +19,7 @@
 #include "Event.h"
 
 #include <vector>
+#include <cstddef>
 
 
 class Agent;
@@ -30,15 +31,14 @@ class AgentParameters;
 class AgentList
       {
    public:
-      typedef std::vector<Agent *> Container;
-      typedef Container::iterator iterator;
+      ~AgentList();
 
       bool empty() const { return list.empty(); }
-      Container::iterator begin() { return list.begin(); }
-      Container::iterator end() { return list.end(); }
+      std::vector<Agent>::iterator begin() { return list.begin(); }
+      std::vector<Agent>::iterator end() { return list.end(); }
       size_t size() { return list.size(); }
 
-      void push_back(Agent *a) { list.push_back(a); }
+      void push_back(const Agent &a) { list.push_back(a); }
 
                   /** Flag for choice between sum and average beat salience values for Agent scores.
                    *  The use of summed saliences favours faster tempi or lower metrical levels. */
@@ -51,22 +51,7 @@ class AgentList
       static const double DEFAULT_BT;
 
                   /** Inserts newAgent into the list in ascending order of beatInterval */
-      void add(Agent *a) { add(a, true); }
-
-                  /** Appends newAgent to list (sort==false), or inserts newAgent into the list
-                   *  in ascending order of beatInterval
-                   *  @param newAgent The agent to be added to the list
-                   *  @param sort Flag indicating whether the list is sorted or not
-                   */
-      void add(Agent *newAgent, bool sort);
-
-                  /** Sorts the AgentList by increasing beatInterval. */
-      void sort();
-
-                  /** Removes the given item from the list.
-                   *  @param ptr Points to the Agent which is removed from the list
-                   */
-      void remove(const iterator &itr);
+      void add(const Agent &newAgent);
 
                   /** Perform beat tracking on a list of events (onsets).
                    *  @param el The list of onsets (or events or peaks) to beat track
@@ -88,13 +73,16 @@ class AgentList
       Agent *bestAgent();
 
    private:
-      Container list;
+          /** Sorts the AgentList by increasing beatInterval. */
+      void sort();
 
-                  /** Removes Agents from the list which are duplicates of other Agents.
-                   *  A duplicate is defined by the tempo and phase thresholds
-                   *  thresholdBI and thresholdBT respectively.
-                   */
+          /** Removes Agents from the list which are duplicates of other Agents.
+           *  A duplicate is defined by the tempo and phase thresholds
+           *  thresholdBI and thresholdBT respectively.
+           */
       void removeDuplicates();
+
+      std::vector<Agent> list;
       };
 
 
