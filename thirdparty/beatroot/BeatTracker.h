@@ -6,7 +6,7 @@
 #include <vector>
 
 
-class AgentParameters;
+struct AgentParameters;
 
 namespace BeatTracker {
 

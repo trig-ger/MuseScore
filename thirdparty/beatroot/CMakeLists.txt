@@ -8,7 +8,6 @@ add_library (
       beatroot STATIC
       Induction.cpp
       BeatTracker.cpp
-      AgentList.cpp
       Agent.cpp
   )
 

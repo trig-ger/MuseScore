@@ -1,6 +1,5 @@
 #include "Induction.h"
 #include "Agent.h"
-#include "AgentList.h"
 
 #include <set>
 #include <map>
@@ -229,12 +228,12 @@ void rankRelatedClusters(std::map<double, IoiCluster> &clusters)
     }
 }
 
-AgentList createAgentList(
+std::set<Agent> createAgentList(
         const AgentParameters &params,
         const std::set<std::map<double, IoiCluster>::const_iterator, DescScore> &bestClusters,
         const std::map<double, IoiCluster> &clusters)
 {
-    AgentList a;
+    std::set<Agent> agents;
 
     for (const auto &bestIt: bestClusters) {
                 // Adjust it, using the size of super- and sub-intervals
@@ -266,19 +265,19 @@ AgentList createAgentList(
             beat /= 2.0;
 
         if (beat >= minIBI)
-            a.push_back(Agent(params, beat));
+            agents.insert(Agent(params, beat));
     }
 
-    return a;
+    return agents;
 }
 
 } // namespace
 
-AgentList doBeatInduction(const AgentParameters &params, const EventList &events)
+std::set<Agent> doBeatInduction(const AgentParameters &params, const EventList &events)
 {
     auto clusters = findClusters(events);
     if (clusters.empty())
-        return AgentList();
+        return std::set<Agent>();
 
     mergeSimilarClusters(clusters);
     setInitialScores(clusters);

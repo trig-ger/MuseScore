@@ -3,9 +3,11 @@
 
 #include "Event.h"
 
+#include <set>
 
-class AgentList;
-class AgentParameters;
+
+class Agent;
+struct AgentParameters;
 
 /** Performs tempo induction by finding clusters of similar
  *  inter-onset intervals (IOIs), ranking them according to the number
@@ -20,7 +22,7 @@ namespace Induction
  *  @return A list of beat tracking agents, where each is initialised with one
  *          of the top tempo hypotheses but no beats
  */
-AgentList doBeatInduction(const AgentParameters &params, const EventList &events);
+std::set<Agent> doBeatInduction(const AgentParameters &params, const EventList &events);
 
 }
 
