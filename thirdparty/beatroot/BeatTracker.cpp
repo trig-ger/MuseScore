@@ -2,7 +2,6 @@
 #include "Agent.h"
 #include "Induction.h"
 
-#include <set>
 #include <cmath>
 #include <algorithm>
 
@@ -27,10 +26,12 @@ const double DEFAULT_BT = 0.04;
  *  A duplicate is defined by the tempo and phase thresholds
  *  thresholdBI and thresholdBT respectively.
  */
-void removeDuplicateAgents(std::set<Agent> &list)
+void removeDuplicateAgents(std::vector<Agent> &list)
 {
     if (list.size() <= 1)
         return;
+
+    std::vector<size_t> removed(list.size(), 0);
 
     for (auto it1 = list.begin(); it1 != std::prev(list.end()); ) {
         const auto curIt1 = it1++;
@@ -42,14 +43,21 @@ void removeDuplicateAgents(std::set<Agent> &list)
                 continue;
                     // remove the agent with the lowest score among two
             if (curIt1->phaseScore < curIt2->phaseScore) {
-                list.erase(curIt1);
+                removed[curIt1 - list.begin()] = 1;
                 break;
             }
             else {
-                list.erase(curIt2);
+                removed[curIt2 - list.begin()] = 1;
             }
         }
     }
+
+    std::vector<Agent> newList;
+    for (size_t i = 0; i != list.size(); ++i) {
+          if (removed[i] == 0)
+                newList.push_back(list[i]);
+          }
+    std::swap(newList, list);
 }
 
 /** The given Event is tested for a possible beat time.
@@ -70,13 +78,13 @@ void removeDuplicateAgents(std::set<Agent> &list)
  * @return Indicate whether the given Event was accepted as a beat by this Agent.
  */
 bool considerAsBeat(const Agent &agent,
-                    std::set<Agent> &agentList,
+                    std::vector<Agent> &agentList,
                     const Event &e)
 {
     if (agent.beatTime < 0) {     // first event
         Agent newAgent(agent);
         newAgent.acceptEvent(e, 0.0, 1);
-        agentList.insert(newAgent);
+        agentList.push_back(newAgent);
         return true;
     }
             // subsequent events
@@ -92,15 +100,15 @@ bool considerAsBeat(const Agent &agent,
                     //   (avoids large phase jump)
             Agent newAgent(agent);
             newAgent.id = Agent::generateNewId();
-            agentList.insert(newAgent);
+            agentList.push_back(newAgent);
         }
         Agent newAgent(agent);
         newAgent.acceptEvent(e, err, beats);
-        agentList.insert(newAgent);
+        agentList.push_back(newAgent);
         return true;
     }
 
-    agentList.insert(agent);
+    agentList.push_back(agent);
 
     return false;
 }
@@ -110,7 +118,7 @@ bool considerAsBeat(const Agent &agent,
  *  @param stop Do not find beats after <code>stop</code> seconds.
  */
 void beatTrack(const EventList &eventList, const AgentParameters &params,
-               std::set<Agent> &agentList, double stopTime)
+               std::vector<Agent> &agentList, double stopTime)
 {
             // if given for one, assume given for others
     const bool isPhaseGiven = (!agentList.empty() && agentList.begin()->beatTime >= 0);
@@ -121,7 +129,7 @@ void beatTrack(const EventList &eventList, const AgentParameters &params,
 
         bool created = isPhaseGiven;
         double prevBeatInterval = -1.0;
-        std::set<Agent> newAgentList;
+        std::vector<Agent> newAgentList;
 
                 // agents are sorted by beat interval in ascending order
         for (auto it = agentList.begin(); it != agentList.end(); ++it) {
@@ -138,6 +146,7 @@ void beatTrack(const EventList &eventList, const AgentParameters &params,
                 created = true;
         }
 
+        std::sort(newAgentList.begin(), newAgentList.end());
         std::swap(agentList, newAgentList);
         removeDuplicateAgents(agentList);
     }
@@ -147,7 +156,7 @@ void beatTrack(const EventList &eventList, const AgentParameters &params,
  *  or NULL if beat tracking has failed.
  *  @return The Agent with the highest score
  */
-std::set<Agent>::const_iterator findBestAgent(const std::set<Agent> &agentList)
+std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agentList)
 {
     double best = -1.0;
     auto bestIt = agentList.end();
@@ -196,7 +205,7 @@ void interpolateBeats(Agent &agent, double start)
 
 std::vector<double> beatTrack(const EventList &events)
       {
-      std::set<Agent> agents = Induction::doBeatInduction(AgentParameters(), events);
+      std::vector<Agent> agents = Induction::doBeatInduction(AgentParameters(), events);
       beatTrack(events, AgentParameters(), agents, -1);
 
       const auto bestAgentIt = findBestAgent(agents);

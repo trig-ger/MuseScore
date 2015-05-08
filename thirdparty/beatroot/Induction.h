@@ -22,7 +22,7 @@ namespace Induction
  *  @return A list of beat tracking agents, where each is initialised with one
  *          of the top tempo hypotheses but no beats
  */
-std::set<Agent> doBeatInduction(const AgentParameters &params, const EventList &events);
+std::vector<Agent> doBeatInduction(const AgentParameters &params, const EventList &events);
 
 }
 

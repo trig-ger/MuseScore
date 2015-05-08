@@ -228,12 +228,12 @@ void rankRelatedClusters(std::map<double, IoiCluster> &clusters)
     }
 }
 
-std::set<Agent> createAgentList(
+std::vector<Agent> createAgentList(
         const AgentParameters &params,
         const std::set<std::map<double, IoiCluster>::const_iterator, DescScore> &bestClusters,
         const std::map<double, IoiCluster> &clusters)
 {
-    std::set<Agent> agents;
+    std::vector<Agent> agents;
 
     for (const auto &bestIt: bestClusters) {
                 // Adjust it, using the size of super- and sub-intervals
@@ -265,19 +265,21 @@ std::set<Agent> createAgentList(
             beat /= 2.0;
 
         if (beat >= minIBI)
-            agents.insert(Agent(params, beat));
+            agents.push_back(Agent(params, beat));
     }
+
+    std::sort(agents.begin(), agents.end());
 
     return agents;
 }
 
 } // namespace
 
-std::set<Agent> doBeatInduction(const AgentParameters &params, const EventList &events)
+std::vector<Agent> doBeatInduction(const AgentParameters &params, const EventList &events)
 {
     auto clusters = findClusters(events);
     if (clusters.empty())
-        return std::set<Agent>();
+        return std::vector<Agent>();
 
     mergeSimilarClusters(clusters);
     setInitialScores(clusters);
