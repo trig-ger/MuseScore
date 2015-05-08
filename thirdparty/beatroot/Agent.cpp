@@ -14,7 +14,6 @@
 */
 
 #include "Agent.h"
-#include "BeatTracker.h"
 #include "AgentList.h"
 
 #include <cmath>
