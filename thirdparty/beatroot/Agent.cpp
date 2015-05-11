@@ -6,6 +6,33 @@
 
 
 namespace BeatTracker {
+namespace {
+
+/** The maximum amount by which a beat can be earlier than the
+ *  predicted beat time, expressed as a fraction of the beat
+ *  period.
+ */
+const double PRE_MARGIN_FACTOR = 0.15;
+
+/** The maximum amount by which a beat can be later than the
+ *  predicted beat time, expressed as a fraction of the beat
+ *  period.
+ */
+const double POST_MARGIN_FACTOR = 0.3;
+
+/** The maximum allowed deviation from the initial tempo,
+ * expressed as a fraction of the initial beat period.
+ */
+const double MAX_TEMPO_CHANGE = 0.2;
+
+/** The default value of expiryTime, which is the time (in
+ *  seconds) after which an Agent that has no Event matching its
+ *  beat predictions will be destroyed.
+ */
+const double EXPIRY_TIME = 10.0;
+
+} // namespace
+
 
 const double Agent::INNER_MARGIN = 0.040;
 const double Agent::CONF_FACTOR = 0.5;
@@ -18,10 +45,10 @@ Agent::Agent(double interBeatInterval)
     , beatInterval(interBeatInterval)
     , initialBeatInterval(interBeatInterval)
     , beatTime(-1.0)
-    , expiryTime(AgentParameters().expiryTime)
-    , maxChange(AgentParameters().maxChange)
-    , preMargin(interBeatInterval * AgentParameters().preMarginFactor)
-    , postMargin(interBeatInterval * AgentParameters().postMarginFactor)
+    , expiryTime(EXPIRY_TIME)
+    , maxChange(MAX_TEMPO_CHANGE)
+    , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
+    , postMargin(interBeatInterval * POST_MARGIN_FACTOR)
     , innerMargin(INNER_MARGIN)
     , correctionFactor(DEFAULT_CORRECTION_FACTOR)
 {

@@ -5,32 +5,6 @@
 #include <vector>
 
 
-struct AgentParameters
-      {
-                  /** The maximum amount by which a beat can be later than the
-                   *  predicted beat time, expressed as a fraction of the beat
-                   *  period.
-                   */
-      double postMarginFactor = 0.3;
-
-                  /** The maximum amount by which a beat can be earlier than the
-                   *  predicted beat time, expressed as a fraction of the beat
-                   *  period.
-                   */
-      double preMarginFactor = 0.15;
-
-                  /** The maximum allowed deviation from the initial tempo,
-                   * expressed as a fraction of the initial beat period.
-                   */
-      double maxChange = 0.2;
-
-                  /** The default value of expiryTime, which is the time (in
-                   *  seconds) after which an Agent that has no Event matching its
-                   *  beat predictions will be destroyed.
-                   */
-      double expiryTime = 10.0;
-      };
-
 namespace BeatTracker {
 
 struct Event;
