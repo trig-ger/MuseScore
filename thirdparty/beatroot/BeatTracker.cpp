@@ -22,20 +22,25 @@ const double DEFAULT_BI = 0.02;
 const double DEFAULT_BT = 0.04;
 
 
+void removeMarkedAgents(std::vector<Agent> &agents)
+      {
+      agents.erase(std::remove_if(agents.begin(), agents.end(),
+                      [](const Agent &a) { return a.phaseScore < 0.0; }),
+                   agents.end());
+      }
+
 /** Removes Agents from the list which are duplicates of other Agents.
  *  A duplicate is defined by the tempo and phase thresholds
  *  thresholdBI and thresholdBT respectively.
  */
-void removeDuplicateAgents(std::vector<Agent> &list)
+void removeDuplicateAgents(std::vector<Agent> &agents)
 {
-    if (list.size() <= 1)
+    if (agents.size() <= 1)
         return;
 
-    std::vector<size_t> removed(list.size(), 0);
-
-    for (auto it1 = list.begin(); it1 != std::prev(list.end()); ) {
+    for (auto it1 = agents.begin(); it1 != std::prev(agents.end()); ) {
         const auto curIt1 = it1++;
-        for (auto it2 = std::next(it1); it2 != list.end(); ) {
+        for (auto it2 = std::next(it1); it2 != agents.end(); ) {
             const auto curIt2 = it2++;
             if (curIt2->beatInterval - curIt1->beatInterval > DEFAULT_BI)
                 break;          // next intervals will be only larger
@@ -43,21 +48,16 @@ void removeDuplicateAgents(std::vector<Agent> &list)
                 continue;
                     // remove the agent with the lowest score among two
             if (curIt1->phaseScore < curIt2->phaseScore) {
-                removed[curIt1 - list.begin()] = 1;
+                curIt1->phaseScore = -1.0;
                 break;
             }
             else {
-                removed[curIt2 - list.begin()] = 1;
+                curIt2->phaseScore = -1.0;
             }
         }
     }
 
-    std::vector<Agent> newList;
-    for (size_t i = 0; i != list.size(); ++i) {
-          if (removed[i] == 0)
-                newList.push_back(list[i]);
-          }
-    std::swap(newList, list);
+    removeMarkedAgents(agents);
 }
 
 /** The given Event is tested for a possible beat time.
@@ -77,19 +77,19 @@ void removeDuplicateAgents(std::vector<Agent> &list)
  *        which is updated if a new agent is created.
  * @return Indicate whether the given Event was accepted as a beat by this Agent.
  */
-bool considerAsBeat(const Agent &agent,
-                    std::vector<Agent> &agentList,
+bool considerAsBeat(Agent &agent,
+                    std::vector<Agent> &agents,
                     const Event &e)
 {
     if (agent.beatTime < 0) {     // first event
-        Agent newAgent(agent);
-        newAgent.acceptEvent(e, 0.0, 1);
-        agentList.push_back(newAgent);
+        agent.acceptEvent(e, 0.0, 1);
         return true;
     }
             // subsequent events
-    if (e.time - std::prev(agent.events.end())->time > agent.expiryTime)
-        return false;       // and don't insert agent, i.e. remove it
+    if (e.time - std::prev(agent.events.end())->time > agent.expiryTime) {
+        agent.phaseScore = -1.0;    // mark for deletion
+        return false;
+        }
 
     const int beats = nearbyint((e.time - agent.beatTime) / agent.beatInterval);
     const double err = e.time - agent.beatTime - beats * agent.beatInterval;
@@ -98,17 +98,11 @@ bool considerAsBeat(const Agent &agent,
         if (std::fabs(err) > agent.innerMargin) {
                     // Create new agent that skips this event
                     //   (avoids large phase jump)
-            Agent newAgent(agent);
-            newAgent.id = Agent::generateNewId();
-            agentList.push_back(newAgent);
+            agents.push_back(Agent::newAgentFromGiven(agent));
         }
-        Agent newAgent(agent);
-        newAgent.acceptEvent(e, err, beats);
-        agentList.push_back(newAgent);
+        agent.acceptEvent(e, err, beats);
         return true;
     }
-
-    agentList.push_back(agent);
 
     return false;
 }
@@ -118,10 +112,10 @@ bool considerAsBeat(const Agent &agent,
  *  @param stop Do not find beats after <code>stop</code> seconds.
  */
 void beatTrack(const EventList &eventList, const AgentParameters &params,
-               std::vector<Agent> &agentList, double stopTime)
+               std::vector<Agent> &agents, double stopTime)
 {
             // if given for one, assume given for others
-    const bool isPhaseGiven = (!agentList.empty() && agentList.begin()->beatTime >= 0);
+    const bool isPhaseGiven = (!agents.empty() && agents.begin()->beatTime >= 0);
 
     for (const Event &ev: eventList) {
         if (stopTime > 0 && ev.time > stopTime)
@@ -129,26 +123,28 @@ void beatTrack(const EventList &eventList, const AgentParameters &params,
 
         bool created = isPhaseGiven;
         double prevBeatInterval = -1.0;
-        std::vector<Agent> newAgentList;
 
-                // agents are sorted by beat interval in ascending order
-        for (auto it = agentList.begin(); it != agentList.end(); ++it) {
-            const Agent &a = *it;
-            if (a.beatInterval != prevBeatInterval) {
-                if (prevBeatInterval >= 0 && !created && ev.time < 5.0) {
-                            // Create a new agent with a different phase
-                    considerAsBeat(Agent(params, prevBeatInterval), newAgentList, ev);
-                }
-                prevBeatInterval = a.beatInterval;
-                created = isPhaseGiven;
-            }
-            if (considerAsBeat(a, newAgentList, ev))
-                created = true;
-        }
+        const size_t oldSize = agents.size();
+                  // agents here are sorted in beat interval ascending order
+        for (size_t i = 0; i != oldSize; ++i) {
+              if (agents[i].beatInterval != prevBeatInterval) {
+                    if (prevBeatInterval >= 0 && !created && ev.time < 5.0) {
+                          // Create a new agent with a different phase
+                          Agent a(params, prevBeatInterval);
+                          // This may add another agent to agent list
+                          considerAsBeat(a, agents, ev);
+                          agents.push_back(a);
+                          }
+                    prevBeatInterval = agents[i].beatInterval;
+                    created = isPhaseGiven;
+                    }
+              if (considerAsBeat(agents[i], agents, ev))
+                    created = true;
+              }
 
-        std::sort(newAgentList.begin(), newAgentList.end());
-        std::swap(agentList, newAgentList);
-        removeDuplicateAgents(agentList);
+        removeMarkedAgents(agents);
+        std::sort(agents.begin(), agents.end());
+        removeDuplicateAgents(agents);
     }
 }
 

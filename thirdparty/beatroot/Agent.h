@@ -111,6 +111,8 @@ class Agent
                   /** Generate the identity number of the next created Agent */
       static int generateNewId();
 
+      static Agent newAgentFromGiven(const Agent &agent);
+
    private:
                   /** The default value of innerMargin, which is the maximum time
                    *  (in seconds) that a beat can deviate from the predicted beat

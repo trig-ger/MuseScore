@@ -31,6 +31,13 @@ int Agent::generateNewId()
     return idCounter++;
 }
 
+Agent Agent::newAgentFromGiven(const Agent &agent)
+{
+      Agent a(agent);
+      a.id = generateNewId();
+      return a;
+}
+
 bool Agent::operator<(const Agent &other) const
 {
     if (beatInterval == other.beatInterval)
