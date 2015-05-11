@@ -1,24 +1,27 @@
 #include "Agent.h"
+#include "Event.h"
 
 #include <cmath>
 #include <algorithm>
 
+
+namespace BeatTracker {
 
 const double Agent::INNER_MARGIN = 0.040;
 const double Agent::CONF_FACTOR = 0.5;
 const double Agent::DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
-Agent::Agent(const AgentParameters &params, double ibi)
+Agent::Agent(double interBeatInterval)
     : phaseScore(0.0)
     , beatCount(0)
-    , beatInterval(ibi)
-    , initialBeatInterval(ibi)
+    , beatInterval(interBeatInterval)
+    , initialBeatInterval(interBeatInterval)
     , beatTime(-1.0)
-    , expiryTime(params.expiryTime)
-    , maxChange(params.maxChange)
-    , preMargin(ibi * params.preMarginFactor)
-    , postMargin(ibi * params.postMarginFactor)
+    , expiryTime(AgentParameters().expiryTime)
+    , maxChange(AgentParameters().maxChange)
+    , preMargin(interBeatInterval * AgentParameters().preMarginFactor)
+    , postMargin(interBeatInterval * AgentParameters().postMarginFactor)
     , innerMargin(INNER_MARGIN)
     , correctionFactor(DEFAULT_CORRECTION_FACTOR)
 {
@@ -58,3 +61,5 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     const double conFactor = 1.0 - CONF_FACTOR * err / (err > 0 ? postMargin: -preMargin);
     phaseScore += conFactor * e.salience;
 }
+
+} // namespace BeatTracker

@@ -1,4 +1,5 @@
 #include "BeatTracker.h"
+#include "Event.h"
 #include "Agent.h"
 #include "Induction.h"
 
@@ -111,8 +112,9 @@ bool considerAsBeat(Agent &agent,
  *  @param el The list of onsets (or events or peaks) to beat track.
  *  @param stop Do not find beats after <code>stop</code> seconds.
  */
-void beatTrack(const EventList &eventList, const AgentParameters &params,
-               std::vector<Agent> &agents, double stopTime)
+void beatTrack(const std::vector<Event> &eventList,
+               std::vector<Agent> &agents,
+               double stopTime)
 {
             // if given for one, assume given for others
     const bool isPhaseGiven = (!agents.empty() && agents.begin()->beatTime >= 0);
@@ -130,7 +132,7 @@ void beatTrack(const EventList &eventList, const AgentParameters &params,
               if (agents[i].beatInterval != prevBeatInterval) {
                     if (prevBeatInterval >= 0 && !created && ev.time < 5.0) {
                           // Create a new agent with a different phase
-                          Agent a(params, prevBeatInterval);
+                          Agent a(prevBeatInterval);
                           // This may add another agent to agent list
                           considerAsBeat(a, agents, ev);
                           agents.push_back(a);
@@ -177,7 +179,7 @@ void interpolateBeats(Agent &agent, double start)
     if (agent.events.empty())
         return;
 
-    EventList newEvents;
+    std::vector<Event> newEvents;
     auto it = agent.events.begin();
     double prevBeat = it->time;
 
@@ -199,10 +201,10 @@ void interpolateBeats(Agent &agent, double start)
 
 } // namespace
 
-std::vector<double> beatTrack(const EventList &events)
+std::vector<double> beatTrack(const std::vector<Event> &events)
       {
-      std::vector<Agent> agents = Induction::doBeatInduction(AgentParameters(), events);
-      beatTrack(events, AgentParameters(), agents, -1);
+      std::vector<Agent> agents = doBeatInduction(events);
+      beatTrack(events, agents, -1);
 
       const auto bestAgentIt = findBestAgent(agents);
       std::vector<double> resultBeatTimes;

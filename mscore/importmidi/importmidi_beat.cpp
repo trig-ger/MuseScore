@@ -8,6 +8,7 @@
 #include "importmidi_tempo.h"
 #include "importmidi_operations.h"
 #include "thirdparty/beatroot/BeatTracker.h"
+#include "thirdparty/beatroot/Event.h"
 #include "mscore/preferences.h"
 #include "libmscore/mscore.h"
 
@@ -69,16 +70,16 @@ double findChordSalience2(
       return velocity;
       }
 
-::EventList prepareChordEvents(
+std::vector<BeatTracker::Event> prepareChordEvents(
             const std::multimap<ReducedFraction, MidiChord> &chords,
             const std::function<double(const std::pair<const ReducedFraction, MidiChord> &,
                                        double)> &findChordSalience,
             double ticksPerSec)
       {
-      ::EventList events;
+      std::vector<BeatTracker::Event> events;
       double minSalience = std::numeric_limits<double>::max();
       for (const auto &chord: chords) {
-            ::Event e;
+            BeatTracker::Event e;
             e.time = chord.first.ticks() / ticksPerSec;
             e.salience = findChordSalience(chord, ticksPerSec);
             if (e.salience < minSalience)
@@ -186,7 +187,7 @@ MidiOperations::HumanBeatData prepareHumanBeatData(
       }
 
 double findMatchRank(const std::set<ReducedFraction> &beatSet,
-                     const ::EventList &events,
+                     const std::vector<BeatTracker::Event> &events,
                      const std::vector<int> &levels,
                      int beatsInBar,
                      double ticksPerSec)

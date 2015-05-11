@@ -1,32 +1,34 @@
 #ifndef _EVENT_H_
 #define _EVENT_H_
 
-#include <vector>
 
+namespace BeatTracker {
 
 struct Event
       {
-      double time;
-      double salience;
-
-      Event()
-            : time(0), salience(0)
+      Event() : time(0), salience(0)
             {}
-      Event(double t, double s)
-            : time(t), salience(s)
+      Event(double t, double s) : time(t), salience(s)
             {}
 
       bool operator<(const Event &e) const
             {
             return time < e.time;
             }
+      bool operator==(const Event &e) const
+            {
+            return time == e.time && salience == e.salience;
+            }
       bool operator!=(const Event &e) const
             {
-            return time != e.time || salience != e.salience;
+            return !operator==(e);
             }
+
+      double time;
+      double salience;
       };
 
-typedef std::vector<Event> EventList;
+} // namespace BeatTracker
 
 
 #endif

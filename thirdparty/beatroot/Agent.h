@@ -1,9 +1,8 @@
 #ifndef _AGENT_H_
 #define _AGENT_H_
 
-#include "Event.h"
 
-#include <set>
+#include <vector>
 
 
 struct AgentParameters
@@ -32,6 +31,9 @@ struct AgentParameters
       double expiryTime = 10.0;
       };
 
+namespace BeatTracker {
+
+struct Event;
 
 /** Agent is the central class for beat tracking.
  *  Each Agent object has a tempo hypothesis, a history of tracked beats, and
@@ -44,7 +46,7 @@ class Agent
            *  @param ibi The beat period (inter-beat interval)
            *  of the Agent's tempo hypothesis.
            */
-      Agent(const AgentParameters &params, double ibi);
+      Agent(double interBeatInterval);
 
       bool operator<(const Agent &other) const;
 
@@ -99,7 +101,7 @@ class Agent
 
                   /** The list of Events (onsets) accepted by this Agent as beats,
                    *  plus interpolated beats. */
-      EventList events;
+      std::vector<Event> events;
 
                   /** Accept a new Event as a beat time, and update the state of the Agent accordingly.
                    *  @param e The Event which is accepted as being on the beat.
@@ -143,5 +145,7 @@ class Agent
                    */
       double correctionFactor;
       };
+
+} // namespace BeatTracker
 
 #endif

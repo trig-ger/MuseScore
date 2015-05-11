@@ -1,5 +1,6 @@
 #include "Induction.h"
 #include "Agent.h"
+#include "Event.h"
 
 #include <set>
 #include <map>
@@ -11,8 +12,7 @@
 #include <QtGlobal>
 
 
-namespace Induction {
-
+namespace BeatTracker {
 namespace {
 
 /** The maximum difference in IOIs which are in the same cluster */
@@ -88,7 +88,7 @@ bool addToClosestCluster(double ioi, std::map<double, IoiCluster> &clusters)
     return false;
 }
 
-std::map<double, IoiCluster> findClusters(const EventList &events)
+std::map<double, IoiCluster> findClusters(const std::vector<Event> &events)
 {
     std::map<double, IoiCluster> clusters;  // <average ioi, cluster>
 
@@ -229,7 +229,6 @@ void rankRelatedClusters(std::map<double, IoiCluster> &clusters)
 }
 
 std::vector<Agent> createAgentList(
-        const AgentParameters &params,
         const std::set<std::map<double, IoiCluster>::const_iterator, DescScore> &bestClusters,
         const std::map<double, IoiCluster> &clusters)
 {
@@ -265,7 +264,7 @@ std::vector<Agent> createAgentList(
             beat /= 2.0;
 
         if (beat >= minIBI)
-            agents.push_back(Agent(params, beat));
+            agents.push_back(Agent(beat));
     }
 
     std::sort(agents.begin(), agents.end());
@@ -275,7 +274,7 @@ std::vector<Agent> createAgentList(
 
 } // namespace
 
-std::vector<Agent> doBeatInduction(const AgentParameters &params, const EventList &events)
+std::vector<Agent> doBeatInduction(const std::vector<Event> &events)
 {
     auto clusters = findClusters(events);
     if (clusters.empty())
@@ -288,7 +287,7 @@ std::vector<Agent> doBeatInduction(const AgentParameters &params, const EventLis
             // no more cluster insertion/deletion from now
     rankRelatedClusters(clusters);
 
-    return createAgentList(params, bestClusters, clusters);
+    return createAgentList(bestClusters, clusters);
 }
 
-} // namespace Induction
+} // namespace BeatTracker
