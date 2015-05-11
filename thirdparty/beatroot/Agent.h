@@ -21,6 +21,9 @@ class Agent
            *  of the Agent's tempo hypothesis.
            */
       Agent(double interBeatInterval);
+      Agent& operator=(const Agent &) = delete;
+      Agent(Agent &&) = default;
+      Agent& operator=(Agent &&) = default;
 
       bool operator<(const Agent &other) const;
 
@@ -90,6 +93,8 @@ class Agent
       static Agent newAgentFromGiven(const Agent &agent);
 
    private:
+      Agent(const Agent &) = default;
+
                   /** The default value of innerMargin, which is the maximum time
                    *  (in seconds) that a beat can deviate from the predicted beat
                    *  time without a fork occurring.

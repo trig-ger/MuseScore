@@ -135,7 +135,7 @@ void beatTrack(const std::vector<Event> &eventList,
                           Agent a(prevBeatInterval);
                           // This may add another agent to agent list
                           considerAsBeat(a, agents, ev);
-                          agents.push_back(a);
+                          agents.push_back(std::move(a));
                           }
                     prevBeatInterval = agents[i].beatInterval;
                     created = isPhaseGiven;
@@ -210,9 +210,9 @@ std::vector<double> beatTrack(const std::vector<Event> &events)
       std::vector<double> resultBeatTimes;
 
       if (bestAgentIt != agents.end()) {
-            Agent bestAgent = *bestAgentIt;
-            interpolateBeats(bestAgent, -1.0);  // -1.0 means from the very beginning
-            for (const auto &e: bestAgent.events)
+                        // -1.0 means from the very beginning
+            interpolateBeats(const_cast<Agent &>(*bestAgentIt), -1.0);
+            for (const auto &e: bestAgentIt->events)
                   resultBeatTimes.push_back(e.time);
             }
       return resultBeatTimes;
