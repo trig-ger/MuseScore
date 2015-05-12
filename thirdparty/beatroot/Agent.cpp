@@ -56,8 +56,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : phaseScore(0.0)
-    , beatCount(0)
+    : beatCount(0)
     , beatInterval(interBeatInterval)
     , initialBeatInterval(interBeatInterval)
     , beatTime(-1.0)
@@ -66,9 +65,11 @@ Agent::Agent(double interBeatInterval)
     , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
     , postMargin(interBeatInterval * POST_MARGIN_FACTOR)
     , innerMargin(INNER_MARGIN)
-    , correctionFactor(DEFAULT_CORRECTION_FACTOR)
+    , correctionFactor_(DEFAULT_CORRECTION_FACTOR)
+    , phaseScore_(0.0)
+    , isMarkedForDeletion_(false)
 {
-    id = generateNewId();
+    id_ = generateNewId();
 }
 
 int Agent::generateNewId()
@@ -80,15 +81,20 @@ int Agent::generateNewId()
 Agent Agent::newAgentFromGiven(const Agent &agent)
 {
       Agent a(agent);
-      a.id = generateNewId();
+      a.id_ = generateNewId();
       return a;
 }
 
 bool Agent::operator<(const Agent &other) const
 {
     if (beatInterval == other.beatInterval)
-        return id < other.id;      // ensure stable ordering
+        return id_ < other.id_;      // ensure stable ordering
     return beatInterval < other.beatInterval;
+}
+
+void Agent::markForDeletion()
+{
+      isMarkedForDeletion_ = true;
 }
 
 void Agent::acceptEvent(const Event &e, double err, int beats)
@@ -96,13 +102,13 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     events_.push_back(e);
     beatTime = e.time;
 
-    if (std::fabs(initialBeatInterval - beatInterval - err / correctionFactor)
+    if (std::fabs(initialBeatInterval - beatInterval - err / correctionFactor_)
             < maxChange * initialBeatInterval) {
-        beatInterval += err / correctionFactor;         // adjust tempo
+        beatInterval += err / correctionFactor_;         // adjust tempo
     }
     beatCount += beats;
     const double conFactor = 1.0 - CONF_FACTOR * err / (err > 0 ? postMargin: -preMargin);
-    phaseScore += conFactor * e.salience;
+    phaseScore_ += conFactor * e.salience;
 }
 
 } // namespace BeatTracker

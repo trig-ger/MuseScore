@@ -30,11 +30,10 @@ class Agent
       const std::vector<Event>& events() const { return events_; }
       std::vector<Event>& events() { return events_; }
 
-                  /** Sum of salience values of the Events which have been
-                   *  interpreted as beats by this Agent, weighted by their nearness
-                   *  to the predicted beat times.
-                   */
-      double phaseScore;
+      double phaseScore() const { return phaseScore_; }
+
+      void markForDeletion();
+      bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
 
                   /** The number of beats found by this Agent, including
                    *  interpolated beats.
@@ -92,7 +91,7 @@ class Agent
       Agent(const Agent &) = default;
 
                   /** The Agent's unique identity number. */
-      int id;
+      int id_;
 
                   /** Controls the reactiveness/inertia balance, i.e. degree of
                    *  change in the tempo.  The beat period is updated by the
@@ -100,7 +99,15 @@ class Agent
                    *  difference between the predicted beat time and matching
                    *  onset.
                    */
-      double correctionFactor;
+      double correctionFactor_;
+
+                  /** Sum of salience values of the Events which have been
+                   *  interpreted as beats by this Agent, weighted by their nearness
+                   *  to the predicted beat times.
+                   */
+      double phaseScore_;
+
+      bool isMarkedForDeletion_;
 
                   /** The list of Events (onsets) accepted by this Agent as beats,
                    *  plus interpolated beats. */

@@ -26,7 +26,7 @@ const double DEFAULT_BT = 0.04;
 void removeMarkedAgents(std::vector<Agent> &agents)
       {
       agents.erase(std::remove_if(agents.begin(), agents.end(),
-                      [](const Agent &a) { return a.phaseScore < 0.0; }),
+                      [](const Agent &a) { return a.isMarkedForDeletion(); }),
                    agents.end());
       }
 
@@ -48,12 +48,12 @@ void removeDuplicateAgents(std::vector<Agent> &agents)
             if (std::fabs(curIt1->beatTime - curIt2->beatTime) > DEFAULT_BT)
                 continue;
                     // remove the agent with the lowest score among two
-            if (curIt1->phaseScore < curIt2->phaseScore) {
-                curIt1->phaseScore = -1.0;
+            if (curIt1->phaseScore() < curIt2->phaseScore()) {
+                curIt1->markForDeletion();
                 break;
             }
             else {
-                curIt2->phaseScore = -1.0;
+                curIt2->markForDeletion();
             }
         }
     }
@@ -88,7 +88,7 @@ bool considerAsBeat(Agent &agent,
     }
             // subsequent events
     if (e.time - std::prev(agent.events().end())->time > agent.expiryTime) {
-        agent.phaseScore = -1.0;    // mark for deletion
+        agent.markForDeletion();
         return false;
         }
 
@@ -169,7 +169,7 @@ std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agent
     for (auto it = agentList.begin(); it != agentList.end(); ++it) {
         if (it->events().empty())
             continue;
-        const double conf = it->phaseScore / (useAverageSalience ? it->beatCount : 1.0);
+        const double conf = it->phaseScore() / (useAverageSalience ? it->beatCount : 1.0);
         if (conf > best) {
             bestIt = it;
             best = conf;
