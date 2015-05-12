@@ -21,7 +21,7 @@ const double PRE_MARGIN_FACTOR = 0.15;
 const double POST_MARGIN_FACTOR = 0.3;
 
 /** The maximum allowed deviation from the initial tempo,
- * expressed as a fraction of the initial beat period.
+ *  expressed as a fraction of the initial beat period.
  */
 const double MAX_TEMPO_CHANGE = 0.2;
 
@@ -55,8 +55,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : maxChange(MAX_TEMPO_CHANGE)
-    , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
+    : preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
     , postMargin(interBeatInterval * POST_MARGIN_FACTOR)
     , innerMargin(INNER_MARGIN)
     , correctionFactor_(DEFAULT_CORRECTION_FACTOR)
@@ -106,7 +105,7 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     beatTime_ = e.time;
 
     if (std::fabs(initialBeatInterval_ - beatInterval_ - err / correctionFactor_)
-            < maxChange * initialBeatInterval_) {
+            < MAX_TEMPO_CHANGE * initialBeatInterval_) {
         beatInterval_ += err / correctionFactor_;         // adjust tempo
     }
     beatCount_ += beats;

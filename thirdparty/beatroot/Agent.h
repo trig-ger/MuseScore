@@ -36,11 +36,6 @@ class Agent
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
 
-                  /** The maximum allowed deviation from the initial tempo,
-                   *  expressed as a fraction of the initial beat period.
-                   */
-      double maxChange;
-
                   /** The size of the outer half-window before the predicted beat time. */
       double preMargin;
 
