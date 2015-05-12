@@ -27,14 +27,10 @@ class Agent
       std::vector<Event>& events() { return events_; }
 
       double phaseScore() const { return phaseScore_; }
+      double beatCount() const { return beatCount_; }
 
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The number of beats found by this Agent, including
-                   *  interpolated beats.
-                   */
-      int beatCount;
 
                   /** The current tempo hypothesis of the Agent, expressed as the
                    *  beat period in seconds.
@@ -102,6 +98,11 @@ class Agent
                    *  to the predicted beat times.
                    */
       double phaseScore_;
+
+                  /** The number of beats found by this Agent, including
+                   *  interpolated beats.
+                   */
+      int beatCount_;
 
       bool isMarkedForDeletion_;
 

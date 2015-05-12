@@ -169,7 +169,7 @@ std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agent
     for (auto it = agentList.begin(); it != agentList.end(); ++it) {
         if (it->events().empty())
             continue;
-        const double conf = it->phaseScore() / (useAverageSalience ? it->beatCount : 1.0);
+        const double conf = it->phaseScore() / (useAverageSalience ? it->beatCount() : 1.0);
         if (conf > best) {
             bestIt = it;
             best = conf;
