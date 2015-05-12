@@ -30,17 +30,13 @@ class Agent
       double beatCount() const { return beatCount_; }
       double beatInterval() const { return beatInterval_; }
       double beatTime() const { return beatTime_; }
+      double preMargin() const { return preMargin_; }
+      double postMargin() const { return postMargin_; }
 
       static double expiryTime();
 
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The size of the outer half-window before the predicted beat time. */
-      double preMargin;
-
-                  /** The size of the outer half-window after the predicted beat time. */
-      double postMargin;
 
                   /** The maximum time (in seconds) that a beat can deviate from the
                    *  predicted beat time without a fork occurring (i.e. a 2nd Agent
@@ -97,6 +93,12 @@ class Agent
 
                   /** The time of the most recent beat accepted by this Agent. */
       double beatTime_;
+
+                  /** The size of the outer half-window before the predicted beat time. */
+      double preMargin_;
+
+                  /** The size of the outer half-window after the predicted beat time. */
+      double postMargin_;
 
       bool isMarkedForDeletion_;
 

@@ -95,7 +95,7 @@ bool considerAsBeat(Agent &agent,
     const int beats = nearbyint((e.time - agent.beatTime()) / agent.beatInterval());
     const double err = e.time - agent.beatTime() - beats * agent.beatInterval();
 
-    if (beats > 0 && -agent.preMargin <= err && err <= agent.postMargin) {
+    if (beats > 0 && -agent.preMargin() <= err && err <= agent.postMargin()) {
         if (std::fabs(err) > agent.innerMargin) {
                     // Create new agent that skips this event
                     //   (avoids large phase jump)
