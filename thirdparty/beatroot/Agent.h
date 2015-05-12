@@ -29,12 +29,10 @@ class Agent
       double phaseScore() const { return phaseScore_; }
       double beatCount() const { return beatCount_; }
       double beatInterval() const { return beatInterval_; }
+      double beatTime() const { return beatTime_; }
 
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The time of the most recent beat accepted by this Agent. */
-      double beatTime;
 
                   /** The time (in seconds) after which an Agent that has no Event
                    *  matching its beat predictions will be destroyed.
@@ -104,6 +102,9 @@ class Agent
                    *  beat period in seconds.
                    */
       double initialBeatInterval_;
+
+                  /** The time of the most recent beat accepted by this Agent. */
+      double beatTime_;
 
       bool isMarkedForDeletion_;
 

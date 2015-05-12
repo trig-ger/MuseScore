@@ -56,8 +56,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : beatTime(-1.0)
-    , expiryTime(EXPIRY_TIME)
+    : expiryTime(EXPIRY_TIME)
     , maxChange(MAX_TEMPO_CHANGE)
     , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
     , postMargin(interBeatInterval * POST_MARGIN_FACTOR)
@@ -67,6 +66,7 @@ Agent::Agent(double interBeatInterval)
     , beatCount_(0)
     , beatInterval_(interBeatInterval)
     , initialBeatInterval_(interBeatInterval)
+    , beatTime_(-1.0)
     , isMarkedForDeletion_(false)
 {
     id_ = generateNewId();
@@ -100,7 +100,7 @@ void Agent::markForDeletion()
 void Agent::acceptEvent(const Event &e, double err, int beats)
 {
     events_.push_back(e);
-    beatTime = e.time;
+    beatTime_ = e.time;
 
     if (std::fabs(initialBeatInterval_ - beatInterval_ - err / correctionFactor_)
             < maxChange * initialBeatInterval_) {

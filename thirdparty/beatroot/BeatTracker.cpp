@@ -45,7 +45,7 @@ void removeDuplicateAgents(std::vector<Agent> &agents)
             const auto curIt2 = it2++;
             if (curIt2->beatInterval() - curIt1->beatInterval() > DEFAULT_BI)
                 break;          // next intervals will be only larger
-            if (std::fabs(curIt1->beatTime - curIt2->beatTime) > DEFAULT_BT)
+            if (std::fabs(curIt1->beatTime() - curIt2->beatTime()) > DEFAULT_BT)
                 continue;
                     // remove the agent with the lowest score among two
             if (curIt1->phaseScore() < curIt2->phaseScore()) {
@@ -82,7 +82,7 @@ bool considerAsBeat(Agent &agent,
                     std::vector<Agent> &agents,
                     const Event &e)
 {
-    if (agent.beatTime < 0) {     // first event
+    if (agent.beatTime() < 0) {     // first event
         agent.acceptEvent(e, 0.0, 1);
         return true;
     }
@@ -92,8 +92,8 @@ bool considerAsBeat(Agent &agent,
         return false;
         }
 
-    const int beats = nearbyint((e.time - agent.beatTime) / agent.beatInterval());
-    const double err = e.time - agent.beatTime - beats * agent.beatInterval();
+    const int beats = nearbyint((e.time - agent.beatTime()) / agent.beatInterval());
+    const double err = e.time - agent.beatTime() - beats * agent.beatInterval();
 
     if (beats > 0 && -agent.preMargin <= err && err <= agent.postMargin) {
         if (std::fabs(err) > agent.innerMargin) {
@@ -124,7 +124,7 @@ void beatTrack(const std::vector<Event> &eventList,
                double stopTime)
 {
             // if given for one, assume given for others
-    const bool isPhaseGiven = (!agents.empty() && agents.begin()->beatTime >= 0);
+    const bool isPhaseGiven = (!agents.empty() && agents.begin()->beatTime() >= 0);
 
     for (const Event &ev: eventList) {
         if (stopTime > 0 && ev.time > stopTime)
