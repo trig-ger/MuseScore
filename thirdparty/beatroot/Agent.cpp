@@ -31,12 +31,28 @@ const double MAX_TEMPO_CHANGE = 0.2;
  */
 const double EXPIRY_TIME = 10.0;
 
+/** The default value of innerMargin, which is the maximum time
+ *  (in seconds) that a beat can deviate from the predicted beat
+ *  time without a fork occurring.
+ */
+const double INNER_MARGIN = 0.040;
+
+/** The slope of the penalty function for onsets which do not
+ *  coincide precisely with predicted beat times.
+ */
+const double CONF_FACTOR = 0.5;
+
+/** The reactiveness/inertia balance, i.e. degree of change in the
+ *  tempo, is controlled by the correctionFactor variable.  This
+ *  constant defines its default value, which currently is not
+ *  subsequently changed. The beat period is updated by the
+ *  reciprocal of the correctionFactor multiplied by the
+ *  difference between the predicted beat time and matching
+ *  onset.
+ */
+const double DEFAULT_CORRECTION_FACTOR = 50.0;
+
 } // namespace
-
-
-const double Agent::INNER_MARGIN = 0.040;
-const double Agent::CONF_FACTOR = 0.5;
-const double Agent::DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
