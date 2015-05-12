@@ -33,16 +33,11 @@ class Agent
       double preMargin() const { return preMargin_; }
       double postMargin() const { return postMargin_; }
 
+      static double innerMargin();
       static double expiryTime();
 
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The maximum time (in seconds) that a beat can deviate from the
-                   *  predicted beat time without a fork occurring (i.e. a 2nd Agent
-                   *  being created).
-                   */
-      double innerMargin;
 
                   /** Accept a new Event as a beat time, and update the state of the Agent accordingly.
                    *  @param e The Event which is accepted as being on the beat.

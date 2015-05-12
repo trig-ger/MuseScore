@@ -30,9 +30,9 @@ const double MAX_TEMPO_CHANGE = 0.2;
  */
 const double EXPIRY_TIME = 10.0;
 
-/** The default value of innerMargin, which is the maximum time
- *  (in seconds) that a beat can deviate from the predicted beat
- *  time without a fork occurring.
+/** The maximum time (in seconds) that a beat can deviate from the
+ *  predicted beat time without a fork occurring (i.e. a 2nd Agent
+ *  being created).
  */
 const double INNER_MARGIN = 0.040;
 
@@ -55,8 +55,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : innerMargin(INNER_MARGIN)
-    , correctionFactor_(DEFAULT_CORRECTION_FACTOR)
+    : correctionFactor_(DEFAULT_CORRECTION_FACTOR)
     , phaseScore_(0.0)
     , beatCount_(0)
     , beatInterval_(interBeatInterval)
@@ -87,6 +86,11 @@ bool Agent::operator<(const Agent &other) const
     if (beatInterval_ == other.beatInterval_)
         return id_ < other.id_;      // ensure stable ordering
     return beatInterval_ < other.beatInterval_;
+}
+
+double Agent::innerMargin()
+{
+      return INNER_MARGIN;
 }
 
 double Agent::expiryTime()
