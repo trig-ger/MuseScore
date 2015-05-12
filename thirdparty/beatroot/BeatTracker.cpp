@@ -43,7 +43,7 @@ void removeDuplicateAgents(std::vector<Agent> &agents)
         const auto curIt1 = it1++;
         for (auto it2 = std::next(it1); it2 != agents.end(); ) {
             const auto curIt2 = it2++;
-            if (curIt2->beatInterval - curIt1->beatInterval > DEFAULT_BI)
+            if (curIt2->beatInterval() - curIt1->beatInterval() > DEFAULT_BI)
                 break;          // next intervals will be only larger
             if (std::fabs(curIt1->beatTime - curIt2->beatTime) > DEFAULT_BT)
                 continue;
@@ -92,8 +92,8 @@ bool considerAsBeat(Agent &agent,
         return false;
         }
 
-    const int beats = nearbyint((e.time - agent.beatTime) / agent.beatInterval);
-    const double err = e.time - agent.beatTime - beats * agent.beatInterval;
+    const int beats = nearbyint((e.time - agent.beatTime) / agent.beatInterval());
+    const double err = e.time - agent.beatTime - beats * agent.beatInterval();
 
     if (beats > 0 && -agent.preMargin <= err && err <= agent.postMargin) {
         if (std::fabs(err) > agent.innerMargin) {
@@ -136,7 +136,7 @@ void beatTrack(const std::vector<Event> &eventList,
         const size_t oldSize = agents.size();
                   // agents here are sorted in beat interval ascending order
         for (size_t i = 0; i != oldSize; ++i) {
-              if (agents[i].beatInterval != prevBeatInterval) {
+              if (agents[i].beatInterval() != prevBeatInterval) {
                     if (prevBeatInterval >= 0 && !created && ev.time < 5.0) {
                           // Create a new agent with a different phase
                           Agent a(prevBeatInterval);
@@ -144,7 +144,7 @@ void beatTrack(const std::vector<Event> &eventList,
                           considerAsBeat(a, agents, ev);
                           agents.push_back(std::move(a));
                           }
-                    prevBeatInterval = agents[i].beatInterval;
+                    prevBeatInterval = agents[i].beatInterval();
                     created = isPhaseGiven;
                     }
               if (considerAsBeat(agents[i], agents, ev))
@@ -193,7 +193,7 @@ void interpolateBeats(Agent &agent, double start)
     for (++it; it != agent.events().end(); ++it) {
         double nextBeat = it->time;
                 // prefer slow tempo
-        int beats = nearbyint((nextBeat - prevBeat) / agent.beatInterval - 0.01);
+        int beats = nearbyint((nextBeat - prevBeat) / agent.beatInterval() - 0.01);
         double currentInterval = (nextBeat - prevBeat) / beats;
         for ( ; nextBeat > start && beats > 1; --beats) {
             prevBeat += currentInterval;

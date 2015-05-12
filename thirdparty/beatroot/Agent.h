@@ -28,14 +28,10 @@ class Agent
 
       double phaseScore() const { return phaseScore_; }
       double beatCount() const { return beatCount_; }
+      double beatInterval() const { return beatInterval_; }
 
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The current tempo hypothesis of the Agent, expressed as the
-                   *  beat period in seconds.
-                   */
-      double beatInterval;
 
                   /** The initial tempo hypothesis of the Agent, expressed as the
                    *  beat period in seconds.
@@ -103,6 +99,11 @@ class Agent
                    *  interpolated beats.
                    */
       int beatCount_;
+
+                  /** The current tempo hypothesis of the Agent, expressed as the
+                   *  beat period in seconds.
+                   */
+      double beatInterval_;
 
       bool isMarkedForDeletion_;
 

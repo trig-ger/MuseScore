@@ -56,7 +56,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : beatInterval(interBeatInterval)
+    : beatInterval_(interBeatInterval)
     , initialBeatInterval(interBeatInterval)
     , beatTime(-1.0)
     , expiryTime(EXPIRY_TIME)
@@ -87,9 +87,9 @@ Agent Agent::newAgentFromGiven(const Agent &agent)
 
 bool Agent::operator<(const Agent &other) const
 {
-    if (beatInterval == other.beatInterval)
+    if (beatInterval_ == other.beatInterval_)
         return id_ < other.id_;      // ensure stable ordering
-    return beatInterval < other.beatInterval;
+    return beatInterval_ < other.beatInterval_;
 }
 
 void Agent::markForDeletion()
@@ -102,9 +102,9 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     events_.push_back(e);
     beatTime = e.time;
 
-    if (std::fabs(initialBeatInterval - beatInterval - err / correctionFactor_)
+    if (std::fabs(initialBeatInterval - beatInterval_ - err / correctionFactor_)
             < maxChange * initialBeatInterval) {
-        beatInterval += err / correctionFactor_;         // adjust tempo
+        beatInterval_ += err / correctionFactor_;         // adjust tempo
     }
     beatCount_ += beats;
     const double conFactor = 1.0 - CONF_FACTOR * err / (err > 0 ? postMargin: -preMargin);
