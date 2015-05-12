@@ -27,6 +27,9 @@ class Agent
 
       bool operator<(const Agent &other) const;
 
+      const std::vector<Event>& events() const { return events_; }
+      std::vector<Event>& events() { return events_; }
+
                   /** Sum of salience values of the Events which have been
                    *  interpreted as beats by this Agent, weighted by their nearness
                    *  to the predicted beat times.
@@ -73,10 +76,6 @@ class Agent
                    */
       double innerMargin;
 
-                  /** The list of Events (onsets) accepted by this Agent as beats,
-                   *  plus interpolated beats. */
-      std::vector<Event> events;
-
                   /** Accept a new Event as a beat time, and update the state of the Agent accordingly.
                    *  @param e The Event which is accepted as being on the beat.
                    *  @param err The difference between the predicted and actual beat times.
@@ -102,6 +101,10 @@ class Agent
                    *  onset.
                    */
       double correctionFactor;
+
+                  /** The list of Events (onsets) accepted by this Agent as beats,
+                   *  plus interpolated beats. */
+      std::vector<Event> events_;
       };
 
 } // namespace BeatTracker

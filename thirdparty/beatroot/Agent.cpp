@@ -93,7 +93,7 @@ bool Agent::operator<(const Agent &other) const
 
 void Agent::acceptEvent(const Event &e, double err, int beats)
 {
-    events.push_back(e);
+    events_.push_back(e);
     beatTime = e.time;
 
     if (std::fabs(initialBeatInterval - beatInterval - err / correctionFactor)

@@ -87,7 +87,7 @@ bool considerAsBeat(Agent &agent,
         return true;
     }
             // subsequent events
-    if (e.time - std::prev(agent.events.end())->time > agent.expiryTime) {
+    if (e.time - std::prev(agent.events().end())->time > agent.expiryTime) {
         agent.phaseScore = -1.0;    // mark for deletion
         return false;
         }
@@ -167,7 +167,7 @@ std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agent
     auto bestIt = agentList.end();
 
     for (auto it = agentList.begin(); it != agentList.end(); ++it) {
-        if (it->events.empty())
+        if (it->events().empty())
             continue;
         const double conf = it->phaseScore / (useAverageSalience ? it->beatCount : 1.0);
         if (conf > best) {
@@ -183,14 +183,14 @@ std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agent
  */
 void interpolateBeats(Agent &agent, double start)
 {
-    if (agent.events.empty())
+    if (agent.events().empty())
         return;
 
     std::vector<Event> newEvents;
-    auto it = agent.events.begin();
+    auto it = agent.events().begin();
     double prevBeat = it->time;
 
-    for (++it; it != agent.events.end(); ++it) {
+    for (++it; it != agent.events().end(); ++it) {
         double nextBeat = it->time;
                 // prefer slow tempo
         int beats = nearbyint((nextBeat - prevBeat) / agent.beatInterval - 0.01);
@@ -202,8 +202,8 @@ void interpolateBeats(Agent &agent, double start)
         prevBeat = nextBeat;
     }
 
-    agent.events.insert(agent.events.end(), newEvents.begin(), newEvents.end());
-    std::sort(agent.events.begin(), agent.events.end());
+    agent.events().insert(agent.events().end(), newEvents.begin(), newEvents.end());
+    std::sort(agent.events().begin(), agent.events().end());
 }
 
 } // namespace
@@ -219,7 +219,7 @@ std::vector<double> beatTrack(const std::vector<Event> &events)
       if (bestAgentIt != agents.end()) {
                         // -1.0 means from the very beginning
             interpolateBeats(const_cast<Agent &>(*bestAgentIt), -1.0);
-            for (const auto &e: bestAgentIt->events)
+            for (const auto &e: bestAgentIt->events())
                   resultBeatTimes.push_back(e.time);
             }
       return resultBeatTimes;
