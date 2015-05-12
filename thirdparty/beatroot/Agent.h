@@ -33,11 +33,6 @@ class Agent
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
 
-                  /** The initial tempo hypothesis of the Agent, expressed as the
-                   *  beat period in seconds.
-                   */
-      double initialBeatInterval;
-
                   /** The time of the most recent beat accepted by this Agent. */
       double beatTime;
 
@@ -104,6 +99,11 @@ class Agent
                    *  beat period in seconds.
                    */
       double beatInterval_;
+
+                  /** The initial tempo hypothesis of the Agent, expressed as the
+                   *  beat period in seconds.
+                   */
+      double initialBeatInterval_;
 
       bool isMarkedForDeletion_;
 

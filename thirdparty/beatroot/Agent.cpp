@@ -56,9 +56,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : beatInterval_(interBeatInterval)
-    , initialBeatInterval(interBeatInterval)
-    , beatTime(-1.0)
+    : beatTime(-1.0)
     , expiryTime(EXPIRY_TIME)
     , maxChange(MAX_TEMPO_CHANGE)
     , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
@@ -67,6 +65,8 @@ Agent::Agent(double interBeatInterval)
     , correctionFactor_(DEFAULT_CORRECTION_FACTOR)
     , phaseScore_(0.0)
     , beatCount_(0)
+    , beatInterval_(interBeatInterval)
+    , initialBeatInterval_(interBeatInterval)
     , isMarkedForDeletion_(false)
 {
     id_ = generateNewId();
@@ -102,8 +102,8 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     events_.push_back(e);
     beatTime = e.time;
 
-    if (std::fabs(initialBeatInterval - beatInterval_ - err / correctionFactor_)
-            < maxChange * initialBeatInterval) {
+    if (std::fabs(initialBeatInterval_ - beatInterval_ - err / correctionFactor_)
+            < maxChange * initialBeatInterval_) {
         beatInterval_ += err / correctionFactor_;         // adjust tempo
     }
     beatCount_ += beats;
