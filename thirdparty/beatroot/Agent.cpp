@@ -25,9 +25,8 @@ const double POST_MARGIN_FACTOR = 0.3;
  */
 const double MAX_TEMPO_CHANGE = 0.2;
 
-/** The default value of expiryTime, which is the time (in
- *  seconds) after which an Agent that has no Event matching its
- *  beat predictions will be destroyed.
+/** The time (in seconds) after which an Agent that has no Event
+ *  matching its beat predictions will be destroyed.
  */
 const double EXPIRY_TIME = 10.0;
 
@@ -56,8 +55,7 @@ const double DEFAULT_CORRECTION_FACTOR = 50.0;
 
 
 Agent::Agent(double interBeatInterval)
-    : expiryTime(EXPIRY_TIME)
-    , maxChange(MAX_TEMPO_CHANGE)
+    : maxChange(MAX_TEMPO_CHANGE)
     , preMargin(interBeatInterval * PRE_MARGIN_FACTOR)
     , postMargin(interBeatInterval * POST_MARGIN_FACTOR)
     , innerMargin(INNER_MARGIN)
@@ -90,6 +88,11 @@ bool Agent::operator<(const Agent &other) const
     if (beatInterval_ == other.beatInterval_)
         return id_ < other.id_;      // ensure stable ordering
     return beatInterval_ < other.beatInterval_;
+}
+
+double Agent::expiryTime()
+{
+      return EXPIRY_TIME;
 }
 
 void Agent::markForDeletion()

@@ -87,7 +87,7 @@ bool considerAsBeat(Agent &agent,
         return true;
     }
             // subsequent events
-    if (e.time - std::prev(agent.events().end())->time > agent.expiryTime) {
+    if (e.time - std::prev(agent.events().end())->time > Agent::expiryTime()) {
         agent.markForDeletion();
         return false;
         }

@@ -31,13 +31,10 @@ class Agent
       double beatInterval() const { return beatInterval_; }
       double beatTime() const { return beatTime_; }
 
+      static double expiryTime();
+
       void markForDeletion();
       bool isMarkedForDeletion() const { return isMarkedForDeletion_; }
-
-                  /** The time (in seconds) after which an Agent that has no Event
-                   *  matching its beat predictions will be destroyed.
-                   */
-      double expiryTime;
 
                   /** The maximum allowed deviation from the initial tempo,
                    *  expressed as a fraction of the initial beat period.
