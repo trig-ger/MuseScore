@@ -27,9 +27,6 @@ class Agent
 
       bool operator<(const Agent &other) const;
 
-                  /** The Agent's unique identity number. */
-      int id;
-
                   /** Sum of salience values of the Events which have been
                    *  interpreted as beats by this Agent, weighted by their nearness
                    *  to the predicted beat times.
@@ -94,6 +91,9 @@ class Agent
 
    private:
       Agent(const Agent &) = default;
+
+                  /** The Agent's unique identity number. */
+      int id;
 
                   /** Controls the reactiveness/inertia balance, i.e. degree of
                    *  change in the tempo.  The beat period is updated by the
