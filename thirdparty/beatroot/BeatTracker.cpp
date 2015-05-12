@@ -95,19 +95,18 @@ bool considerAsBeat(Agent &agent,
     const double err = e.time - agent.beatTime() - beats * agent.beatInterval();
 
     if (beats > 0 && -agent.preMargin() <= err && err <= agent.postMargin()) {
-        if (std::fabs(err) > agent.innerMargin()) {
-                    // Create new agent that skips this event
-                    //   (avoids large phase jump)
-            Agent a = Agent::newAgentFromGiven(agent);
-            agent.acceptEvent(e, err, beats);
-                  // push_back may change the container location,
-                  //   so do it can influence the &agent ref,
-                  //   therefore it should be called after agent.acceptEvent()
-            agents.push_back(std::move(a));
-        }
-        else {
+          if (std::fabs(err) <= agent.innerMargin()) {
+                agent.acceptEvent(e, err, beats);
+                }
+          else {      // Create new agent that skips this event
+                      //   (avoids large phase jump)
+              Agent a = Agent::newAgentFromGiven(agent);
               agent.acceptEvent(e, err, beats);
-              }
+                    // push_back may change the container location,
+                    //   so do it can influence the &agent ref,
+                    //   therefore it should be called after agent.acceptEvent()
+              agents.push_back(std::move(a));
+          }
         return true;
     }
 
