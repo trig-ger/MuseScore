@@ -41,22 +41,19 @@ const double INNER_MARGIN = 0.040;
  */
 const double CONF_FACTOR = 0.5;
 
-/** The reactiveness/inertia balance, i.e. degree of change in the
- *  tempo, is controlled by the correction factor variable.  This
- *  constant defines its default value, which currently is not
- *  subsequently changed. The beat period is updated by the
- *  reciprocal of the correctionFactor multiplied by the
+/** Controls the reactiveness/inertia balance, i.e. degree of
+ *  change in the tempo.  The beat period is updated by the
+ *  reciprocal of the correction factor multiplied by the
  *  difference between the predicted beat time and matching
  *  onset.
  */
-const double DEFAULT_CORRECTION_FACTOR = 50.0;
+const double CORRECTION_FACTOR = 50.0;
 
 } // namespace
 
 
 Agent::Agent(double interBeatInterval)
-    : correctionFactor_(DEFAULT_CORRECTION_FACTOR)
-    , phaseScore_(0.0)
+    : phaseScore_(0.0)
     , beatCount_(0)
     , beatInterval_(interBeatInterval)
     , initialBeatInterval_(interBeatInterval)
@@ -108,9 +105,9 @@ void Agent::acceptEvent(const Event &e, double err, int beats)
     events_.push_back(e);
     beatTime_ = e.time;
 
-    if (std::fabs(initialBeatInterval_ - beatInterval_ - err / correctionFactor_)
+    if (std::fabs(initialBeatInterval_ - beatInterval_ - err / CORRECTION_FACTOR)
             < MAX_TEMPO_CHANGE * initialBeatInterval_) {
-        beatInterval_ += err / correctionFactor_;         // adjust tempo
+        beatInterval_ += err / CORRECTION_FACTOR;         // adjust tempo
     }
     beatCount_ += beats;
     const double conFactor = 1.0 - CONF_FACTOR * err / (err > 0 ? postMargin_: -preMargin_);

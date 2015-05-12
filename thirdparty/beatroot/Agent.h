@@ -57,14 +57,6 @@ class Agent
                   /** The Agent's unique identity number. */
       int id_;
 
-                  /** Controls the reactiveness/inertia balance, i.e. degree of
-                   *  change in the tempo.  The beat period is updated by the
-                   *  reciprocal of the correctionFactor multiplied by the
-                   *  difference between the predicted beat time and matching
-                   *  onset.
-                   */
-      double correctionFactor_;
-
                   /** Sum of salience values of the Events which have been
                    *  interpreted as beats by this Agent, weighted by their nearness
                    *  to the predicted beat times.
