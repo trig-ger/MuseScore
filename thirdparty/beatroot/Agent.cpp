@@ -43,7 +43,7 @@ const double INNER_MARGIN = 0.040;
 const double CONF_FACTOR = 0.5;
 
 /** The reactiveness/inertia balance, i.e. degree of change in the
- *  tempo, is controlled by the correctionFactor variable.  This
+ *  tempo, is controlled by the correction factor variable.  This
  *  constant defines its default value, which currently is not
  *  subsequently changed. The beat period is updated by the
  *  reciprocal of the correctionFactor multiplied by the
