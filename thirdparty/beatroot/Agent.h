@@ -16,10 +16,6 @@ struct Event;
 class Agent
       {
    public:
-          /** Constructor: the work is performed by init()
-           *  @param ibi The beat period (inter-beat interval)
-           *  of the Agent's tempo hypothesis.
-           */
       Agent(double interBeatInterval);
       Agent& operator=(const Agent &) = delete;
       Agent(Agent &&) = default;
