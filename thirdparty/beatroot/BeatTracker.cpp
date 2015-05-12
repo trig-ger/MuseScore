@@ -74,8 +74,7 @@ void removeDuplicateAgents(std::vector<Agent> &agents)
  *  5) The Event is ignored because it is outside the windows around
  *     the Agent's predicted beat time.
  * @param e The Event to be tested
- * @param agentList The list of all agents,
- *        which is updated if a new agent is created.
+ * @param agents The list of all agents, which is updated if a new agent is created.
  * @return Indicate whether the given Event was accepted as a beat by this Agent.
  */
 bool considerAsBeat(Agent &agent,
@@ -116,8 +115,9 @@ bool considerAsBeat(Agent &agent,
 }
 
 /** Perform beat tracking on a list of events (onsets).
- *  @param el The list of onsets (or events or peaks) to beat track.
- *  @param stop Do not find beats after <code>stop</code> seconds.
+ *  @param eventList The list of onsets (or events or peaks) to beat track.
+ *  @param agents The list of all agents created.
+ *  @param stopTime Do not find beats after <code>stop</code> seconds.
  */
 void beatTrack(const std::vector<Event> &eventList,
                std::vector<Agent> &agents,
@@ -158,7 +158,7 @@ void beatTrack(const std::vector<Event> &eventList,
 }
 
 /** Finds the Agent with the highest score in the list,
- *  or NULL if beat tracking has failed.
+ *  or end() if beat tracking has failed.
  *  @return The Agent with the highest score
  */
 std::vector<Agent>::const_iterator findBestAgent(const std::vector<Agent> &agentList)
