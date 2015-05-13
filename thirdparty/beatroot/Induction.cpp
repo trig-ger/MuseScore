@@ -42,6 +42,9 @@ const double maxIBI = 1.0;   // 60 BPM, was 0.75 => 80 BPM
 /** The maximum number of tempo hypotheses to return */
 const int topN = 10;
 
+/** The size of the window to obtain local tempo */
+const double TEMPO_WINDOW_SIZE = 5; // s
+
 
         // IOI = inter-onset interval
 struct IoiCluster
@@ -88,14 +91,17 @@ bool addToClosestCluster(double ioi, std::map<double, IoiCluster> &clusters)
     return false;
 }
 
-std::map<double, IoiCluster> findClusters(const std::vector<Event> &events)
+std::map<double, IoiCluster> findClusters(
+            size_t beg, size_t end, const std::vector<Event> &events)
 {
+    Q_ASSERT(beg < end && end <= events.size());
+
     std::map<double, IoiCluster> clusters;  // <average ioi, cluster>
 
-    for (size_t i = 0; i < events.size() - 1; ++i) {
+    for (size_t i = beg; i < end - 1; ++i) {
           const Event &e1 = events[i];
 
-          for (size_t j = i + 1; j < events.size(); ++j) {
+          for (size_t j = i + 1; j < end; ++j) {
                 const Event &e2 = events[j];
 
                 Q_ASSERT(e2.time > e1.time);
@@ -228,11 +234,11 @@ void rankRelatedClusters(std::map<double, IoiCluster> &clusters)
     }
 }
 
-std::vector<Agent> createAgentList(
+std::vector<double> findBeats(
         const std::set<std::map<double, IoiCluster>::const_iterator, DescScore> &bestClusters,
         const std::map<double, IoiCluster> &clusters)
 {
-    std::vector<Agent> agents;
+    std::vector<double> beats;
 
     for (const auto &bestIt: bestClusters) {
                 // Adjust it, using the size of super- and sub-intervals
@@ -264,30 +270,72 @@ std::vector<Agent> createAgentList(
             beat /= 2.0;
 
         if (beat >= minIBI)
-            agents.push_back(Agent(beat));
+            beats.push_back(beat);
     }
 
-    std::sort(agents.begin(), agents.end());
+    std::sort(beats.begin(), beats.end());
 
-    return agents;
+    return beats;
 }
 
 } // namespace
 
-std::vector<Agent> doBeatInduction(const std::vector<Event> &events)
+BeatMap doBeatInduction(const std::vector<Event> &events)
 {
-    auto clusters = findClusters(events);
-    if (clusters.empty())
-        return std::vector<Agent>();
+    size_t eventsBeg = 0;
+    for (size_t i = 0; i != events.size(); ++i) {
+          if (events[i].time < TEMPO_WINDOW_SIZE / 2)
+                eventsBeg = i;
+          else
+                break;
+          }
 
-    mergeSimilarClusters(clusters);
-    setInitialScores(clusters);
-            // find best clusters (as iterators) before changing cluster scores
-    const auto bestClusters = findBestNClusters(clusters);
-            // no more cluster insertion/deletion from now
-    rankRelatedClusters(clusters);
+    size_t eventsEnd = events.size();
+    const double endTime = events[events.size() - 1].time;
+    for (size_t i = events.size(); i > 0; --i) {
+          if (endTime - events[i - 1].time < TEMPO_WINDOW_SIZE / 2)
+                eventsEnd = i;
+          else
+                break;
+          }
 
-    return createAgentList(bestClusters, clusters);
+    BeatMap beatMap(eventsBeg, eventsEnd);
+
+    for (size_t i = eventsBeg; i != eventsEnd; ++i) {
+          const double centralTime = events[i].time;
+
+          size_t beg = i;
+          for (size_t j = i + 1; j > 0; --j) {
+                if (centralTime - events[j - 1].time < TEMPO_WINDOW_SIZE / 2)
+                      beg = j - 1;
+                else
+                      break;
+                }
+
+          size_t end = i;
+          for (size_t j = i + 1; j < events.size(); ++j) {
+                end = j;
+                if (events[j].time - centralTime > TEMPO_WINDOW_SIZE / 2)
+                      break;
+                }
+
+          auto clusters = findClusters(beg, end, events);
+          if (clusters.empty())
+                continue;
+
+          mergeSimilarClusters(clusters);
+          setInitialScores(clusters);
+                  // find best clusters (as iterators) before changing cluster scores
+          const auto bestClusters = findBestNClusters(clusters);
+                  // no more cluster insertion/deletion from now
+          rankRelatedClusters(clusters);
+
+          std::vector<double> beats = findBeats(bestClusters, clusters);
+          if (!beats.empty())
+                beatMap.addBeats(i, std::move(beats));
+     }
+
+    return beatMap;
 }
 
 } // namespace BeatTracker

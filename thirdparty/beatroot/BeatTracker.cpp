@@ -115,13 +115,21 @@ bool considerAsBeat(Agent &agent,
 
 /** Perform beat tracking on a list of events (onsets).
  *  @param eventList The list of onsets (or events or peaks) to beat track.
- *  @param agents The list of all agents created.
  *  @param stopTime Do not find beats after <code>stop</code> seconds.
+ *  @return agents The list of all agents created.
  */
-void beatTrack(const std::vector<Event> &eventList,
-               std::vector<Agent> &agents,
-               double stopTime)
+std::vector<Agent> beatTrack(const std::vector<Event> &eventList,
+                             const BeatMap &beatMap,
+                             double stopTime)
 {
+      Q_ASSERT(!beatMap.isEmpty());
+
+      std::vector<Agent> agents;
+      const auto &beats = beatMap.beatsForEvent(0);
+      for (double beat: beats)
+            agents.push_back(beat);
+      std::sort(agents.begin(), agents.end());
+
             // if given for one, assume given for others
     const bool isPhaseGiven = (!agents.empty() && agents.begin()->beatTime() >= 0);
 
@@ -154,6 +162,8 @@ void beatTrack(const std::vector<Event> &eventList,
         std::sort(agents.begin(), agents.end());
         removeDuplicateAgents(agents);
     }
+
+    return agents;
 }
 
 /** Finds the Agent with the highest score in the list,
@@ -209,12 +219,14 @@ void interpolateBeats(Agent &agent, double start)
 
 std::vector<double> beatTrack(const std::vector<Event> &events)
       {
-      std::vector<Agent> agents = doBeatInduction(events);
-      beatTrack(events, agents, -1);
+      const BeatMap beatMap = doBeatInduction(events);
+      if (beatMap.isEmpty())
+            return std::vector<double>();
 
+      const auto agents = beatTrack(events, beatMap, -1);
       const auto bestAgentIt = findBestAgent(agents);
-      std::vector<double> resultBeatTimes;
 
+      std::vector<double> resultBeatTimes;
       if (bestAgentIt != agents.end()) {
                         // -1.0 means from the very beginning
             interpolateBeats(const_cast<Agent &>(*bestAgentIt), -1.0);
