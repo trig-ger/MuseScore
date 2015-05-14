@@ -289,10 +289,11 @@ bool hasNotesWithEqualPitch(const MidiChord &chord1, const MidiChord &chord2)
 void collectChords(
             std::multimap<int, MTrack> &tracks,
             const ReducedFraction &humanTolCoeff,
-            const ReducedFraction &nonHumanTolCoeff)
+            const ReducedFraction &nonHumanTolCoeff,
+            double ticksPerSec)
       {
       for (auto &track: tracks)
-            collectChords(track.second, humanTolCoeff, nonHumanTolCoeff);
+            collectChords(track.second, humanTolCoeff, nonHumanTolCoeff, ticksPerSec);
       }
 
 // based on quickthresh algorithm
@@ -322,7 +323,8 @@ void collectChords(
 void collectChords(
             MTrack &track,
             const ReducedFraction &humanTolCoeff,
-            const ReducedFraction &nonHumanTolCoeff)
+            const ReducedFraction &nonHumanTolCoeff,
+            double ticksPerSec)
       {
       auto &chords = track.chords;
       if (chords.empty())
@@ -331,12 +333,13 @@ void collectChords(
       Q_ASSERT_X(areNotesLongEnough(chords),
                  "MChord::collectChords", "There are too short notes");
 
-      const auto &opers = preferences.midiImportOperations.data()->trackOpers;
+      //const auto &opers = preferences.midiImportOperations.data()->trackOpers;
       const auto minAllowedDur = minAllowedDuration();
 
-      const auto threshTime = (opers.isHumanPerformance.value())
-                                    ? minAllowedDur * humanTolCoeff
-                                    : minAllowedDur * nonHumanTolCoeff;
+//      const auto threshTime = (opers.isHumanPerformance.value())
+//                                    ? minAllowedDur * humanTolCoeff
+//                                    : minAllowedDur * nonHumanTolCoeff;
+      const auto threshTime = ReducedFraction::fromTicks(0.04 * ticksPerSec);
       const auto fudgeTime = threshTime / 4;
       const auto threshExtTime = threshTime / 2;
 

@@ -104,15 +104,13 @@ ReducedFraction findMinDuration(const ReducedFraction &onTime,
 void sortNotesByPitch(std::multimap<ReducedFraction, MidiChord> &chords);
 void sortNotesByLength(std::multimap<ReducedFraction, MidiChord> &chords);
 
-void collectChords(
-            std::multimap<int, MTrack> &tracks,
+void collectChords(std::multimap<int, MTrack> &tracks,
             const ReducedFraction &humanTolCoeff,
-            const ReducedFraction &nonHumanTolCoeff);
+            const ReducedFraction &nonHumanTolCoeff, double ticksPerSec);
 
-void collectChords(
-            MTrack &track,
+void collectChords(MTrack &track,
             const ReducedFraction &humanTolCoeff,
-            const ReducedFraction &nonHumanTolCoeff);
+            const ReducedFraction &nonHumanTolCoeff, double ticksPerSec);
 
 void removeOverlappingNotes(std::multimap<int, MTrack> &tracks);
 void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks);

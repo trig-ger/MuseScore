@@ -209,6 +209,8 @@ void quantizeAllTracks(std::multimap<int, MTrack> &tracks,
                        const ReducedFraction &lastTick)
       {
       auto &opers = preferences.midiImportOperations;
+      const auto ticksPerSec = MidiTempo::findBasicTempo(
+                        tracks, opers.data()->trackOpers.isHumanPerformance.value()) * MScore::division;
 
       for (auto &track: tracks) {
             MTrack &mtrack = track.second;
@@ -245,7 +247,7 @@ void quantizeAllTracks(std::multimap<int, MTrack> &tracks,
 
                         // (4/3 of the smallest duration) tol is less sensitive
                         // to on time inaccuracies than 1/2 earlier
-            MChord::collectChords(mtrack, {2, 1}, {4, 3});
+            MChord::collectChords(mtrack, {2, 1}, {4, 3}, ticksPerSec);
             Quantize::quantizeChords(mtrack.chords, sigmap, basicQuant);
             MidiTuplet::removeEmptyTuplets(mtrack);
 
@@ -1100,7 +1102,9 @@ void convertMidi(Score *score, const MidiFile *mf)
                           != ReducedFraction(0, 1) : true,
                  "convertMidi", "Null time signature for human-performed MIDI file");
 
-      MChord::collectChords(tracks, {2, 1}, {1, 2});
+      const auto ticksPerSec = MidiTempo::findBasicTempo(
+                        tracks, opers.data()->trackOpers.isHumanPerformance.value()) * MScore::division;
+      MChord::collectChords(tracks, {2, 1}, {1, 2}, ticksPerSec);
       MidiBeat::adjustChordsToBeats(tracks);
       MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
 

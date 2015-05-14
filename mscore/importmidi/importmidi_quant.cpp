@@ -396,7 +396,8 @@ void setIfHumanPerformance(
             TimeSigMap *sigmap)
       {
       auto allChordsTrack = getTrackWithAllChords(tracks);
-      MChord::collectChords(allChordsTrack, {2, 1}, {1, 2});
+      const auto ticksPerSec = MidiTempo::findBasicTempo(tracks, true) * MScore::division;
+      MChord::collectChords(allChordsTrack, {2, 1}, {1, 2}, ticksPerSec);
       const MTrack &track = allChordsTrack.begin()->second;
       const auto &allChords = track.chords;
       if (allChords.empty())
@@ -407,7 +408,6 @@ void setIfHumanPerformance(
       if (opers.isHumanPerformance.canRedefineDefaultLater())
             opers.isHumanPerformance.setDefaultValue(isHuman);
 
-      const auto ticksPerSec = MidiTempo::findBasicTempo(tracks, isHuman) * MScore::division;
       for (const auto &c: allChords) {
             const double time = c.first.ticks() / ticksPerSec;
             if (time > 97) {
