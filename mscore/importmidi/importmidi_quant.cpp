@@ -401,10 +401,23 @@ void setIfHumanPerformance(
       const auto &allChords = track.chords;
       if (allChords.empty())
             return;
+
       const bool isHuman = isHumanPerformance(allChords, sigmap);
       auto &opers = preferences.midiImportOperations.data()->trackOpers;
       if (opers.isHumanPerformance.canRedefineDefaultLater())
             opers.isHumanPerformance.setDefaultValue(isHuman);
+
+      const auto ticksPerSec = MidiTempo::findBasicTempo(tracks, isHuman) * MScore::division;
+      for (const auto &c: allChords) {
+            const double time = c.first.ticks() / ticksPerSec;
+            if (time > 97) {
+                  QString s;
+                  for (const auto &note: c.second.notes) {
+                        s += QString::number(note.pitch) + " ";
+                        }
+                  qDebug() << time << s;
+                  }
+            }
 
       if (isHuman) {
             if (opers.quantValue.canRedefineDefaultLater())
